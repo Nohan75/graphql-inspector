@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphQL Inspector</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Toolbar ─────────────────────────────────────────── -->
+  <div id="toolbar">
+    <input
+      id="filter-input"
+      type="text"
+      placeholder="Filter operations…"
+      autocomplete="off"
+      spellcheck="false"
+    >
+    <div class="toolbar-sep"></div>
+    <label class="toolbar-label">
+      <input type="checkbox" id="preserve-log">
+      Preserve log
+    </label>
+    <div class="toolbar-sep"></div>
+    <button id="clear-btn" title="Clear all requests">✕</button>
+    <span class="toolbar-count" id="request-count"></span>
+  </div>
+
+  <!-- ── Main split ──────────────────────────────────────── -->
+  <div id="main">
+
+    <!-- Left sidebar -->
+    <div id="sidebar">
+      <div id="request-list">
+        <!-- empty state shown when no requests captured -->
+        <div id="empty-state">
+          <div class="empty-icon">⬡</div>
+          <p>No GraphQL requests captured yet.<br>Make a request on the page to see it here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right detail panel -->
+    <div id="detail-panel">
+      <div id="no-selection">Select a request to inspect it</div>
+
+      <div id="request-detail" class="hidden">
+        <!-- Tab bar -->
+        <div id="tab-bar">
+          <button class="tab-btn active" data-tab="request">Request</button>
+          <button class="tab-btn" data-tab="response">Response</button>
+          <button class="tab-btn" data-tab="response-raw">Raw</button>
+          <button class="tab-btn" data-tab="headers">Headers</button>
+        </div>
+
+        <!-- Tab: Request -->
+        <div class="tab-content active" id="tab-request">
+          <div class="section-header">
+            <span class="section-title">Query</span>
+            <button class="copy-btn" id="copy-query">Copy</button>
+          </div>
+          <div class="query-block">
+            <div class="query-pre" id="query-display"></div>
+          </div>
+
+          <div id="variables-section">
+            <div class="section-header">
+              <span class="section-title">Variables</span>
+              <button class="copy-btn" id="copy-variables">Copy</button>
+            </div>
+            <div class="json-tree" id="variables-display"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Response -->
+        <div class="tab-content" id="tab-response">
+          <div id="response-error-notice" class="hidden"></div>
+          <div class="section-header">
+            <span class="section-title">Response</span>
+            <button class="copy-btn" id="copy-response">Copy</button>
+          </div>
+          <div class="json-tree" id="response-display"></div>
+        </div>
+
+        <!-- Tab: Response Raw -->
+        <div class="tab-content" id="tab-response-raw">
+          <div class="section-header">
+            <span class="section-title">Raw Response</span>
+            <button class="copy-btn" id="copy-raw">Copy</button>
+          </div>
+          <pre class="raw-pre" id="raw-display"></pre>
+        </div>
+
+        <!-- Tab: Headers -->
+        <div class="tab-content" id="tab-headers">
+          <div class="section-header" style="margin-top:0">
+            <span class="section-title">Request Headers</span>
+          </div>
+          <table class="headers-table" id="request-headers-table"></table>
+
+          <div class="section-header">
+            <span class="section-title">Response Headers</span>
+          </div>
+          <table class="headers-table" id="response-headers-table"></table>
+        </div>
+
+      </div><!-- /#request-detail -->
+    </div><!-- /#detail-panel -->
+
+  </div><!-- /#main -->
+</div><!-- /#app -->
+
+<script src="panel.js"></script>
+</body>
+</html>
