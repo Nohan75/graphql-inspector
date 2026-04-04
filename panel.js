@@ -303,7 +303,7 @@ function populateDetail(req) {
   if (req.variables && Object.keys(req.variables).length > 0) {
     variablesSection.classList.remove('hidden');
     variablesDisplay.innerHTML = '';
-    variablesDisplay.appendChild(renderJsonTree(req.variables, undefined, undefined, { n: 1 }));
+    variablesDisplay.appendChild(renderJsonTree(req.variables));
   } else {
     variablesSection.classList.add('hidden');
   }
@@ -328,7 +328,7 @@ function populateDetail(req) {
 
   responseDisplay.innerHTML = '';
   if (req.response !== null) {
-    responseDisplay.appendChild(renderJsonTree(req.response, undefined, undefined, { n: 1 }));
+    responseDisplay.appendChild(renderJsonTree(req.response));
   } else {
     responseDisplay.textContent = '(no response body)';
   }
@@ -628,152 +628,167 @@ function renderQueryWithLineNumbers(source) {
   return editor;
 }
 
-// ── JSON tree renderer ─────────────────────────────────────────
+// ── JSON tree renderer (flat DOM, fixed gutter) ─────────────────
 
-/**
- * Recursively render a JS value as a collapsible DOM tree.
- * Returns a DocumentFragment or Element.
- */
-function renderJsonTree(value, key, isLast, lineCounter) {
-  if (!lineCounter) lineCounter = { n: 1 };
+function renderJsonTree(rootValue) {
+  const container = document.createElement('div');
+  container.className = 'json-tree';
 
-  const frag = document.createDocumentFragment();
-  const row  = document.createElement('div');
-  row.className = 'jt-row';
+  // Build a flat array of row descriptors
+  const rowsData = [];
+  let lineNum = 1;
+  let nextId  = 0;
 
-  // Gutter line number
-  const gutter = document.createElement('span');
-  gutter.className = 'jt-gutter';
-  gutter.textContent = lineCounter.n++;
-  row.appendChild(gutter);
+  function flatten(value, key, depth, isLast) {
+    const id = ++nextId;
 
-  if (value !== null && typeof value === 'object') {
-    const isArray    = Array.isArray(value);
-    const entries    = isArray ? value : Object.entries(value);
-    const isEmpty    = isArray ? value.length === 0 : entries.length === 0;
-    const openBrace  = isArray ? '[' : '{';
-    const closeBrace = isArray ? ']' : '}';
-    const count      = isArray ? value.length : entries.length;
+    if (value !== null && typeof value === 'object') {
+      const isArr   = Array.isArray(value);
+      const entries = isArr ? value : Object.entries(value);
+      const count   = entries.length;
+      const openIdx = rowsData.length;
 
-    const toggle = document.createElement('span');
-    toggle.className = 'jt-toggle open';
-    toggle.textContent = '▶';
+      rowsData.push({ type: 'open', id, depth, key, count, isArr, lineNum: lineNum++, isLast, openIdx });
 
-    const keySpan = document.createElement('span');
-    if (key !== undefined) {
-      keySpan.innerHTML =
-        '<span class="jt-key">' + escapeHtml(String(key)) + '</span>' +
-        '<span class="jt-colon">: </span>';
-    }
-
-    const openSpan = document.createElement('span');
-    openSpan.className = 'jt-brace';
-    openSpan.textContent = openBrace;
-
-    const summarySpan = document.createElement('span');
-    summarySpan.className = 'jt-summary';
-    summarySpan.textContent = isEmpty
-      ? ''
-      : (isArray ? count + ' items' : count + ' keys');
-
-    row.appendChild(toggle);
-    row.appendChild(keySpan);
-    row.appendChild(openSpan);
-    row.appendChild(summarySpan);
-    frag.appendChild(row);
-
-    if (!isEmpty) {
-      const children = document.createElement('div');
-      children.className = 'jt-children';
-
-      if (isArray) {
-        value.forEach(function(item, idx) {
-          children.appendChild(renderJsonTree(item, idx, idx === value.length - 1, lineCounter));
-        });
+      if (isArr) {
+        value.forEach(function(v, i) { flatten(v, i, depth + 1, i === value.length - 1); });
       } else {
-        entries.forEach(function([k, v], idx) {
-          children.appendChild(renderJsonTree(v, k, idx === entries.length - 1, lineCounter));
-        });
+        entries.forEach(function(entry, i) { flatten(entry[1], entry[0], depth + 1, i === entries.length - 1); });
       }
 
-      const closeRow = document.createElement('div');
-      closeRow.className = 'jt-row';
-      const closeGutter = document.createElement('span');
-      closeGutter.className = 'jt-gutter';
-      closeGutter.textContent = lineCounter.n++;
-      const closeSpan = document.createElement('span');
-      closeSpan.className = 'jt-brace';
-      closeSpan.textContent = closeBrace + (isLast === false ? ',' : '');
-      closeRow.appendChild(closeGutter);
-      closeRow.appendChild(closeSpan);
+      const closeIdx = rowsData.length;
+      rowsData.push({ type: 'close', id, depth, isArr, lineNum: lineNum++, isLast });
+      rowsData[openIdx].closeIdx = closeIdx;
 
-      frag.appendChild(children);
-      frag.appendChild(closeRow);
-
-      toggle.style.display = 'inline-block';
-      toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const open = toggle.classList.contains('open');
-        toggle.classList.toggle('open',   !open);
-        toggle.classList.toggle('closed',  open);
-        children.classList.toggle('hidden', open);
-        summarySpan.style.display = open ? 'inline' : 'none';
-        closeRow.style.display    = open ? 'none'   : '';
-      });
     } else {
-      toggle.style.visibility = 'hidden';
-      const closeInline = document.createElement('span');
-      closeInline.className = 'jt-brace';
-      closeInline.textContent = closeBrace + (isLast === false ? ',' : '');
-      row.appendChild(closeInline);
+      rowsData.push({ type: 'prim', id, depth, key, value, lineNum: lineNum++, isLast });
     }
-
-  } else {
-    // Primitive
-    const toggle = document.createElement('span');
-    toggle.className = 'jt-toggle';
-    toggle.style.visibility = 'hidden';
-    row.appendChild(toggle);
-
-    if (key !== undefined) {
-      const keySpan = document.createElement('span');
-      keySpan.innerHTML =
-        '<span class="jt-key">' + escapeHtml(String(key)) + '</span>' +
-        '<span class="jt-colon">: </span>';
-      row.appendChild(keySpan);
-    }
-
-    const valSpan = document.createElement('span');
-    if (value === null) {
-      valSpan.className   = 'jt-null';
-      valSpan.textContent = 'null';
-    } else if (typeof value === 'string') {
-      valSpan.className   = 'jt-string';
-      valSpan.textContent = '"' + value + '"';
-    } else if (typeof value === 'number') {
-      valSpan.className   = 'jt-number';
-      valSpan.textContent = String(value);
-    } else if (typeof value === 'boolean') {
-      valSpan.className   = 'jt-boolean';
-      valSpan.textContent = String(value);
-    } else {
-      valSpan.textContent = String(value);
-    }
-
-    if (isLast === false) {
-      const comma = document.createElement('span');
-      comma.className   = 'jt-comma';
-      comma.textContent = ',';
-      row.appendChild(valSpan);
-      row.appendChild(comma);
-    } else {
-      row.appendChild(valSpan);
-    }
-
-    frag.appendChild(row);
   }
 
-  return frag;
+  flatten(rootValue, undefined, 0, true);
+
+  // Build DOM rows (all flat, direct children of container)
+  const rowEls = [];
+
+  rowsData.forEach(function(row) {
+    const div = document.createElement('div');
+    div.className = 'jt-row';
+    div._hiddenBy = new Set();
+
+    // Fixed gutter
+    const gutter = document.createElement('span');
+    gutter.className = 'jt-gutter';
+    gutter.textContent = row.lineNum;
+    div.appendChild(gutter);
+
+    // Content — indented via padding-left based on depth
+    const content = document.createElement('span');
+    content.className = 'jt-content';
+    content.style.paddingLeft = (row.depth * 16) + 'px';
+
+    if (row.type === 'open') {
+      const toggle = document.createElement('span');
+      toggle.className = row.count > 0 ? 'jt-toggle open' : 'jt-toggle';
+      toggle.style.visibility = row.count > 0 ? '' : 'hidden';
+      toggle.textContent = '▶';
+      content.appendChild(toggle);
+
+      if (row.key !== undefined) {
+        const keyEl = document.createElement('span');
+        keyEl.innerHTML = '<span class="jt-key">' + escapeHtml(String(row.key)) + '</span><span class="jt-colon">: </span>';
+        content.appendChild(keyEl);
+      }
+
+      const brace = document.createElement('span');
+      brace.className = 'jt-brace';
+      brace.textContent = row.isArr ? '[' : '{';
+      content.appendChild(brace);
+
+      if (row.count > 0) {
+        const summary = document.createElement('span');
+        summary.className = 'jt-summary';
+        summary.textContent = row.isArr ? row.count + ' items' : row.count + ' keys';
+        content.appendChild(summary);
+        div._toggleEl  = toggle;
+        div._summaryEl = summary;
+      }
+
+    } else if (row.type === 'close') {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'jt-toggle';
+      placeholder.style.visibility = 'hidden';
+      content.appendChild(placeholder);
+
+      const brace = document.createElement('span');
+      brace.className = 'jt-brace';
+      brace.textContent = (row.isArr ? ']' : '}') + (row.isLast === false ? ',' : '');
+      content.appendChild(brace);
+
+    } else {
+      // Primitive
+      const placeholder = document.createElement('span');
+      placeholder.className = 'jt-toggle';
+      placeholder.style.visibility = 'hidden';
+      content.appendChild(placeholder);
+
+      if (row.key !== undefined) {
+        const keyEl = document.createElement('span');
+        keyEl.innerHTML = '<span class="jt-key">' + escapeHtml(String(row.key)) + '</span><span class="jt-colon">: </span>';
+        content.appendChild(keyEl);
+      }
+
+      const valEl = document.createElement('span');
+      const v = row.value;
+      if (v === null)             { valEl.className = 'jt-null';    valEl.textContent = 'null'; }
+      else if (typeof v === 'string')  { valEl.className = 'jt-string';  valEl.textContent = '"' + v + '"'; }
+      else if (typeof v === 'number')  { valEl.className = 'jt-number';  valEl.textContent = String(v); }
+      else if (typeof v === 'boolean') { valEl.className = 'jt-boolean'; valEl.textContent = String(v); }
+      else                              { valEl.textContent = String(v); }
+      content.appendChild(valEl);
+
+      if (row.isLast === false) {
+        const comma = document.createElement('span');
+        comma.className = 'jt-comma';
+        comma.textContent = ',';
+        content.appendChild(comma);
+      }
+    }
+
+    div.appendChild(content);
+    container.appendChild(div);
+    rowEls.push(div);
+  });
+
+  // Attach collapse handlers
+  rowsData.forEach(function(row, idx) {
+    if (row.type !== 'open' || row.count === 0) return;
+
+    const openEl   = rowEls[idx];
+    const toggleEl = openEl._toggleEl;
+    const summaryEl = openEl._summaryEl;
+    // Child rows = everything between open and close (inclusive of close)
+    const childEls = rowEls.slice(idx + 1, row.closeIdx + 1);
+
+    toggleEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isOpen = toggleEl.classList.contains('open');
+
+      toggleEl.classList.toggle('open',   !isOpen);
+      toggleEl.classList.toggle('closed',  isOpen);
+      summaryEl.style.display = isOpen ? 'inline' : 'none';
+
+      childEls.forEach(function(el) {
+        if (isOpen) {
+          el._hiddenBy.add(row.id);
+        } else {
+          el._hiddenBy.delete(row.id);
+        }
+        el.style.display = el._hiddenBy.size > 0 ? 'none' : '';
+      });
+    });
+  });
+
+  return container;
 }
 
 // ── Init ───────────────────────────────────────────────────────
