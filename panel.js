@@ -297,13 +297,13 @@ function selectRequest(id) {
 
 function populateDetail(req) {
   // ── Request tab ──────────────────────────────────────────
-  queryDisplay.innerHTML = highlightGQL(req.query);
-  attachQueryCollapseHandlers(queryDisplay);
+  queryDisplay.innerHTML = '';
+  queryDisplay.appendChild(renderQueryWithLineNumbers(req.query));
 
   if (req.variables && Object.keys(req.variables).length > 0) {
     variablesSection.classList.remove('hidden');
     variablesDisplay.innerHTML = '';
-    variablesDisplay.appendChild(renderJsonTree(req.variables));
+    variablesDisplay.appendChild(renderJsonTree(req.variables, undefined, undefined, { n: 1 }));
   } else {
     variablesSection.classList.add('hidden');
   }
@@ -328,7 +328,7 @@ function populateDetail(req) {
 
   responseDisplay.innerHTML = '';
   if (req.response !== null) {
-    responseDisplay.appendChild(renderJsonTree(req.response));
+    responseDisplay.appendChild(renderJsonTree(req.response, undefined, undefined, { n: 1 }));
   } else {
     responseDisplay.textContent = '(no response body)';
   }
@@ -532,84 +532,97 @@ function highlightGQL(source) {
   return out;
 }
 
-// ── Query collapse handlers ────────────────────────────────────
-// After highlighting we attach click-to-collapse on brace spans.
-// We do a DOM-based approach: wrap lines that contain { in a collapsible.
+// ── Query renderer with line numbers + collapse ────────────────
 
-function attachQueryCollapseHandlers(container) {
-  // Nothing extra needed: brace spans already in place.
-  // We add a simpler line-based fold by re-building the content.
-  // For a production tool we'd use a proper tokeniser; here we keep it simple
-  // and just allow click on any brace to visually indicate collapsing.
-  const braceSpans = container.querySelectorAll('.ql-brace');
-  braceSpans.forEach(function(span) {
-    if (span.textContent === '{') {
-      span.title = 'Click to collapse block';
-      span.style.cursor = 'pointer';
-      span.addEventListener('click', function(e) {
-        e.stopPropagation();
-        // Find matching closing brace in DOM (sibling text nodes / spans)
-        toggleQueryBlock(span);
-      });
-    }
+function renderQueryWithLineNumbers(source) {
+  if (!source) return document.createDocumentFragment();
+
+  const lines = source.split('\n');
+
+  // Trim common leading indentation
+  const nonEmpty = lines.filter(l => l.trim().length > 0);
+  const minIndent = nonEmpty.length
+    ? Math.min(...nonEmpty.map(l => l.match(/^(\s*)/)[1].length))
+    : 0;
+  const trimmedLines = lines.map(l => l.slice(minIndent));
+
+  const editor = document.createElement('div');
+  editor.className = 'query-editor';
+
+  const lineEls = [];
+
+  trimmedLines.forEach(function(line, idx) {
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'ql-line';
+
+    const gutter = document.createElement('span');
+    gutter.className = 'ql-gutter';
+    gutter.textContent = idx + 1;
+
+    const fold = document.createElement('span');
+    fold.className = 'ql-fold';
+
+    const content = document.createElement('span');
+    content.className = 'ql-line-content';
+    content.innerHTML = highlightGQL(line);
+
+    lineDiv.appendChild(gutter);
+    lineDiv.appendChild(fold);
+    lineDiv.appendChild(content);
+    editor.appendChild(lineDiv);
+    lineEls.push(lineDiv);
   });
-}
 
-function toggleQueryBlock(openBrace) {
-  // Simple approach: toggle a hidden sibling wrapper if it exists,
-  // otherwise build one.
-  const parent = openBrace.parentNode;
-  let wrapper  = openBrace._collapseWrapper;
+  // Attach fold handlers: lines ending with { are foldable
+  trimmedLines.forEach(function(line, idx) {
+    if (!line.trimEnd().endsWith('{')) return;
 
-  if (wrapper) {
-    const collapsed = wrapper.classList.contains('hidden');
-    wrapper.classList.toggle('hidden', !collapsed);
-    openBrace.textContent = collapsed ? '{' : '{ … }';
-    return;
-  }
+    const openIndent = line.search(/\S/);
+    if (openIndent === -1) return;
 
-  // Build wrapper: collect all nodes between this { and the matching }
-  // We use a depth counter to find the matching close brace span.
-  const allNodes = Array.from(parent.childNodes);
-  const startIdx = allNodes.indexOf(openBrace);
-  if (startIdx === -1) return;
-
-  let depth    = 1;
-  let endIdx   = -1;
-  let closeSpan = null;
-
-  for (let j = startIdx + 1; j < allNodes.length; j++) {
-    const node = allNodes[j];
-    if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('ql-brace')) {
-      if (node.textContent === '{') depth++;
-      if (node.textContent === '}') {
-        depth--;
-        if (depth === 0) {
-          endIdx    = j;
-          closeSpan = node;
-          break;
-        }
+    // Find the matching closing line (same indent level, starts with })
+    let closeIdx = -1;
+    for (let j = idx + 1; j < trimmedLines.length; j++) {
+      const jLine = trimmedLines[j];
+      if (!jLine.trim()) continue;
+      const jIndent = jLine.search(/\S/);
+      if (jIndent <= openIndent && jLine.trim().startsWith('}')) {
+        closeIdx = j;
+        break;
       }
     }
-  }
 
-  if (endIdx === -1) return;
+    if (closeIdx <= idx + 1) return; // nothing to fold
 
-  // Wrap nodes between openBrace and closeSpan
-  wrapper = document.createElement('span');
-  wrapper.className = 'ql-block-content';
-  openBrace._collapseWrapper = wrapper;
+    const foldBtn = lineEls[idx].querySelector('.ql-fold');
+    foldBtn.textContent = '▾';
 
-  // Insert wrapper after openBrace
-  const fragment = document.createDocumentFragment();
-  const toMove   = allNodes.slice(startIdx + 1, endIdx);
-  toMove.forEach(n => fragment.appendChild(n));
-  wrapper.appendChild(fragment);
-  parent.insertBefore(wrapper, closeSpan);
+    let collapsed = false;
+    let ellipsis  = null;
 
-  // Now toggle
-  wrapper.classList.add('hidden');
-  openBrace.textContent = '{ … }';
+    foldBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      collapsed = !collapsed;
+      foldBtn.textContent = collapsed ? '▸' : '▾';
+
+      for (let j = idx + 1; j < closeIdx; j++) {
+        lineEls[j].classList.toggle('folded-hidden', collapsed);
+      }
+
+      const contentSpan = lineEls[idx].querySelector('.ql-line-content');
+      if (collapsed) {
+        ellipsis = document.createElement('span');
+        ellipsis.className = 'ql-ellipsis-inline';
+        ellipsis.textContent = ' … }';
+        contentSpan.appendChild(ellipsis);
+      } else if (ellipsis) {
+        ellipsis.remove();
+        ellipsis = null;
+      }
+    });
+  });
+
+  return editor;
 }
 
 // ── JSON tree renderer ─────────────────────────────────────────
@@ -618,11 +631,18 @@ function toggleQueryBlock(openBrace) {
  * Recursively render a JS value as a collapsible DOM tree.
  * Returns a DocumentFragment or Element.
  */
-function renderJsonTree(value, key, isLast) {
-  const frag = document.createDocumentFragment();
+function renderJsonTree(value, key, isLast, lineCounter) {
+  if (!lineCounter) lineCounter = { n: 1 };
 
+  const frag = document.createDocumentFragment();
   const row  = document.createElement('div');
   row.className = 'jt-row';
+
+  // Gutter line number
+  const gutter = document.createElement('span');
+  gutter.className = 'jt-gutter';
+  gutter.textContent = lineCounter.n++;
+  row.appendChild(gutter);
 
   if (value !== null && typeof value === 'object') {
     const isArray    = Array.isArray(value);
@@ -665,25 +685,28 @@ function renderJsonTree(value, key, isLast) {
 
       if (isArray) {
         value.forEach(function(item, idx) {
-          children.appendChild(renderJsonTree(item, idx, idx === value.length - 1));
+          children.appendChild(renderJsonTree(item, idx, idx === value.length - 1, lineCounter));
         });
       } else {
         entries.forEach(function([k, v], idx) {
-          children.appendChild(renderJsonTree(v, k, idx === entries.length - 1));
+          children.appendChild(renderJsonTree(v, k, idx === entries.length - 1, lineCounter));
         });
       }
 
       const closeRow = document.createElement('div');
       closeRow.className = 'jt-row';
+      const closeGutter = document.createElement('span');
+      closeGutter.className = 'jt-gutter';
+      closeGutter.textContent = lineCounter.n++;
       const closeSpan = document.createElement('span');
       closeSpan.className = 'jt-brace';
       closeSpan.textContent = closeBrace + (isLast === false ? ',' : '');
+      closeRow.appendChild(closeGutter);
       closeRow.appendChild(closeSpan);
 
       frag.appendChild(children);
       frag.appendChild(closeRow);
 
-      // Toggle collapse
       toggle.style.display = 'inline-block';
       toggle.addEventListener('click', function(e) {
         e.stopPropagation();
