@@ -308,7 +308,7 @@ function populateDetail(req) {
     variablesSection.classList.add('hidden');
   }
 
-  copyQueryBtn.onclick = () => copyToClipboard(req.query, copyQueryBtn);
+  copyQueryBtn.onclick = () => copyToClipboard(normalizeQuery(req.query), copyQueryBtn);
   copyVariablesBtn.onclick = () => copyToClipboard(
     JSON.stringify(req.variables, null, 2), copyVariablesBtn
   );
@@ -534,17 +534,20 @@ function highlightGQL(source) {
 
 // ── Query renderer with line numbers + collapse ────────────────
 
-function renderQueryWithLineNumbers(source) {
-  if (!source) return document.createDocumentFragment();
-
+function normalizeQuery(source) {
+  if (!source) return '';
   const lines = source.split('\n');
-
-  // Trim common leading indentation
   const nonEmpty = lines.filter(l => l.trim().length > 0);
   const minIndent = nonEmpty.length
     ? Math.min(...nonEmpty.map(l => l.match(/^(\s*)/)[1].length))
     : 0;
-  const trimmedLines = lines.map(l => l.slice(minIndent));
+  return lines.map(l => l.slice(minIndent)).join('\n').trim();
+}
+
+function renderQueryWithLineNumbers(source) {
+  if (!source) return document.createDocumentFragment();
+
+  const trimmedLines = normalizeQuery(source).split('\n');
 
   const editor = document.createElement('div');
   editor.className = 'query-editor';
