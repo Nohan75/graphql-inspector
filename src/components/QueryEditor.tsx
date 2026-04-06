@@ -129,7 +129,7 @@ export function QueryEditor({ query }: QueryEditorProps) {
             )}
 
             {/* Code tokens */}
-            <span style={{ whiteSpace: 'pre' }}>
+            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
               {tokens.map((token, ti) => {
                 const cls = tokenClassMap[token.type];
                 return cls ? (

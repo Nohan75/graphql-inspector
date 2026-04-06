@@ -1,6 +1,8 @@
 import React from 'react';
 import type { GQLRequest } from '../types';
-import { buildApolloSandboxUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
+import { buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
+import { parse, print } from 'graphql';
+import { stripCommonIndent } from '../utils/graphql';
 
 interface RequestItemProps {
   request: GQLRequest;
@@ -22,8 +24,7 @@ const BADGE_LABELS: Record<string, string> = {
 };
 
 function statusColor(status: number): string {
-  if (status >= 500) return 'var(--color-error)';
-  if (status >= 400) return 'var(--color-warning)';
+  if (status >= 400) return 'var(--color-error)';
   if (status >= 200 && status < 300) return 'var(--color-success)';
   return 'var(--color-text-muted)';
 }
@@ -43,12 +44,16 @@ export function RequestItem({
       alert('Invalid sandbox URL. Please check your settings.');
       return;
     }
-    const url = buildApolloSandboxUrl(
-      sandboxUrl,
-      request.query,
-      request.variables,
-      request.url
-    );
+    let normalizedQuery: string;
+    try {
+      normalizedQuery = print(parse(request.query));
+    } catch {
+      normalizedQuery = stripCommonIndent(request.query.trim());
+    }
+    const isApollo = sandboxUrl.includes('apollographql') || sandboxUrl.includes('apollo.dev');
+    const url = isApollo
+      ? buildApolloSandboxUrl(sandboxUrl, normalizedQuery, request.variables, request.url)
+      : buildGraphiQLUrl(sandboxUrl, normalizedQuery, request.variables);
     openInSandbox(url);
   };
 
