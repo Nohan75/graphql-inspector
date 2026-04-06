@@ -269,7 +269,7 @@ export function JsonTree({
         if (node.label !== null) {
           const labelText = `${node.label}: `;
           labelEl = (
-            <span className="text-syn-field">
+            <span className="text-syn-field shrink-0">
               {searchTerm && hasMatch
                 ? highlightText(labelText, searchTerm, isCurrentMatch, 0)
                 : labelText}
@@ -279,7 +279,7 @@ export function JsonTree({
 
         // Build value part
         const valueEl = (
-          <span className={valueClass}>
+          <span className={`${valueClass} break-all`}>
             {searchTerm && hasMatch
               ? highlightText(vp, searchTerm, isCurrentMatch, 0)
               : vp}
@@ -305,7 +305,7 @@ export function JsonTree({
             <span className="line-gutter">{node.lineNumber}</span>
 
             {/* Content with indentation */}
-            <span className={`indent-${Math.min(node.depth, 25)} flex items-baseline shrink-0`}>
+            <span className={`indent-${Math.min(node.depth, 25)} flex items-baseline min-w-0 flex-1`}>
               {/* Collapse arrow */}
               {node.isCollapsible ? (
                 <span
