@@ -3,6 +3,10 @@
    Complete DevTools panel logic
    ============================================================= */
 
+// ── Constants ──────────────────────────────────────────────────
+const MAX_REQUESTS        = 500;
+const VALID_OP_TYPES      = new Set(['query', 'mutation', 'subscription']);
+
 // ── State ──────────────────────────────────────────────────────
 let requests       = [];
 let selectedId     = null;
@@ -46,6 +50,13 @@ settingsOverlay.addEventListener('click', function(e) {
 
 settingsSave.addEventListener('click', function() {
   const val = sandboxUrlInput.value.trim();
+  if (val && !isValidHttpUrl(val)) {
+    sandboxUrlInput.style.borderColor = 'var(--status-err)';
+    sandboxUrlInput.title = 'URL invalide — seuls http:// et https:// sont acceptés';
+    return;
+  }
+  sandboxUrlInput.style.borderColor = '';
+  sandboxUrlInput.title = '';
   sandboxUrl = val;
   chrome.storage.local.set({ sandboxUrl: val });
   updateSandboxBtn();
@@ -57,6 +68,29 @@ sandboxUrlInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') settingsSave.click();
   if (e.key === 'Escape') settingsClose.click();
 });
+
+function isValidHttpUrl(str) {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function buildSandboxUrl(base, reqUrl, query, variables) {
+  if (!isValidHttpUrl(base)) return null;
+  const vars = variables ? JSON.stringify(variables, null, 2) : '{}';
+  if (base.includes('apollographql')) {
+    return base
+      + '?endpoint='  + encodeURIComponent(reqUrl)
+      + '&document='  + encodeURIComponent(query)
+      + '&variables=' + encodeURIComponent(vars);
+  }
+  return base
+    + '?query='     + encodeURIComponent(query)
+    + '&variables=' + encodeURIComponent(vars);
+}
 
 function updateSandboxBtn() {
   if (openSandboxBtn) {
@@ -235,6 +269,7 @@ chrome.devtools.network.onRequestFinished.addListener(function(request) {
       };
 
       requests.push(entry);
+      if (requests.length > MAX_REQUESTS) requests.shift();
     });
 
     renderRequestList();
@@ -275,11 +310,8 @@ function renderRequestList() {
     item.className = 'request-item' + (req.id === selectedId ? ' selected' : '');
     item.dataset.id = req.id;
 
-    const badgeLetter = req.operationType === 'mutation'
-      ? 'M'
-      : req.operationType === 'subscription'
-        ? 'S'
-        : 'Q';
+    const safeType    = VALID_OP_TYPES.has(req.operationType) ? req.operationType : 'query';
+    const badgeLetter = safeType === 'mutation' ? 'M' : safeType === 'subscription' ? 'S' : 'Q';
 
     const isError   = req.status >= 400 || hasGraphQLErrors(req.response);
     const statusCls = isError ? 'err' : 'ok';
@@ -289,7 +321,7 @@ function renderRequestList() {
 
     // Badge
     const badge = document.createElement('div');
-    badge.className = 'type-badge ' + req.operationType;
+    badge.className = 'type-badge ' + safeType;
     badge.textContent = badgeLetter;
 
     // Info
@@ -313,20 +345,8 @@ function renderRequestList() {
     sandboxItemBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       if (!sandboxUrl) return;
-      const query     = normalizeQuery(req.query);
-      const variables = req.variables ? JSON.stringify(req.variables, null, 2) : '{}';
-      let url;
-      if (sandboxUrl.includes('apollographql')) {
-        url = sandboxUrl
-          + '?endpoint='  + encodeURIComponent(req.url)
-          + '&document='  + encodeURIComponent(query)
-          + '&variables=' + encodeURIComponent(variables);
-      } else {
-        url = sandboxUrl
-          + '?query='     + encodeURIComponent(query)
-          + '&variables=' + encodeURIComponent(variables);
-      }
-      chrome.tabs.create({ url });
+      const url = buildSandboxUrl(sandboxUrl, req.url, normalizeQuery(req.query), req.variables);
+      if (url) chrome.tabs.create({ url });
     });
 
     item.appendChild(badge);
@@ -396,24 +416,8 @@ function populateDetail(req) {
 
   openSandboxBtn.onclick = function() {
     if (!sandboxUrl) return;
-    const query     = normalizeQuery(req.query);
-    const variables = req.variables ? JSON.stringify(req.variables, null, 2) : '{}';
-    // Apollo Sandbox uses ?document= + ?endpoint=
-    // GraphiQL uses ?query=
-    // We support both by detecting the sandbox URL
-    let url;
-    if (sandboxUrl.includes('studio.apollographql.com') || sandboxUrl.includes('apollographql')) {
-      url = sandboxUrl
-        + '?endpoint='  + encodeURIComponent(req.url)
-        + '&document='  + encodeURIComponent(query)
-        + '&variables=' + encodeURIComponent(variables);
-    } else {
-      // Generic GraphiQL-compatible format
-      url = sandboxUrl
-        + '?query='     + encodeURIComponent(query)
-        + '&variables=' + encodeURIComponent(variables);
-    }
-    chrome.tabs.create({ url });
+    const url = buildSandboxUrl(sandboxUrl, req.url, normalizeQuery(req.query), req.variables);
+    if (url) chrome.tabs.create({ url });
   };
   copyVariablesBtn.onclick = () => copyToClipboard(
     JSON.stringify(req.variables, null, 2), copyVariablesBtn

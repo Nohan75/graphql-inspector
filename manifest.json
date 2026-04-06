@@ -7,5 +7,8 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["storage", "tabs"]
+  "permissions": ["storage", "tabs"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none';"
+  }
 }
