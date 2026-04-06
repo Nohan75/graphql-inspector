@@ -499,6 +499,8 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 .section-header:first-child { margin-top: 0; }
+
+#variables-section { margin-top: 20px; }
 .section-title {
   font-size: 10px;
   font-weight: 700;
