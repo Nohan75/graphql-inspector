@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #1e1e1e;
+  --color-sidebar: #252526;
+  --color-toolbar: #2d2d2d;
+  --color-border: #3c3c3c;
+  --color-text: #cccccc;
+  --color-text-muted: #858585;
+  --color-accent: #0078d4;
+  --color-accent-hover: #106ebe;
+  --color-selected: #094771;
+  --color-hover: #2a2d2e;
+  --color-badge-query: #569cd6;
+  --color-badge-mutation: #ce9178;
+  --color-badge-subscription: #4ec9b0;
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-syn-keyword: #569cd6;
+  --color-syn-type: #4ec9b0;
+  --color-syn-field: #9cdcfe;
+  --color-syn-string: #ce9178;
+  --color-syn-brace: #ffd700;
+  --color-syn-comment: #6a9955;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Search highlights */
+.jt-search-match {
+  background-color: rgba(255, 200, 0, 0.3);
+  border-radius: 2px;
+}
+.jt-search-current {
+  background-color: rgba(255, 140, 0, 0.6);
+  border-radius: 2px;
+}
+
+/* Code syntax highlight */
+.syn-keyword { color: var(--color-syn-keyword); }
+.syn-type { color: var(--color-syn-type); }
+.syn-field { color: var(--color-syn-field); }
+.syn-string { color: var(--color-syn-string); }
+.syn-brace { color: var(--color-syn-brace); }
+.syn-comment { color: var(--color-syn-comment); }
+.syn-variable { color: #c586c0; }
+
+/* Line numbers gutter */
+.line-gutter {
+  display: inline-block;
+  min-width: 2.5rem;
+  padding-right: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Query editor code fold arrows */
+.fold-arrow {
+  display: inline-block;
+  width: 12px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+.fold-arrow:hover {
+  color: var(--color-text);
+}
