@@ -26,6 +26,37 @@
     <div class="toolbar-sep"></div>
     <button id="clear-btn" title="Clear all requests">✕</button>
     <span class="toolbar-count" id="request-count"></span>
+    <button id="settings-btn" title="Settings">⚙</button>
+  </div>
+
+  <!-- ── Settings modal ────────────────────────────────────── -->
+  <div id="settings-overlay" class="hidden">
+    <div id="settings-modal">
+      <div id="settings-header">
+        <span>Settings</span>
+        <button id="settings-close">✕</button>
+      </div>
+      <div id="settings-body">
+        <label class="settings-label">
+          GraphQL Sandbox URL
+          <span class="settings-hint">Supports GraphiQL, Apollo Sandbox, Hoppscotch…</span>
+        </label>
+        <input
+          id="sandbox-url-input"
+          type="url"
+          placeholder="https://studio.apollographql.com/sandbox/explorer"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <div class="settings-note">
+          Apollo Sandbox : <code>?document=</code> + <code>&amp;endpoint=</code> (auto-détecté)<br>
+          GraphiQL : <code>?query=</code> + <code>&amp;variables=</code>
+        </div>
+      </div>
+      <div id="settings-footer">
+        <button id="settings-save">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Main split ──────────────────────────────────────── -->
@@ -59,7 +90,10 @@
         <div class="tab-content active" id="tab-request">
           <div class="section-header">
             <span class="section-title">Query</span>
-            <button class="copy-btn" id="copy-query">Copy</button>
+            <div class="section-actions">
+              <button class="action-btn" id="open-sandbox-btn" title="Open in sandbox">Open in Sandbox ↗</button>
+              <button class="copy-btn" id="copy-query">Copy</button>
+            </div>
           </div>
           <div class="query-block">
             <div class="query-pre" id="query-display"></div>

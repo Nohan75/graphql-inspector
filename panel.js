@@ -10,6 +10,62 @@ let filterText     = '';
 let preserveLog    = false;
 let activeTab      = 'request';
 let requestCounter = 0;
+let sandboxUrl     = '';
+
+// ── Settings ───────────────────────────────────────────────────
+
+const settingsBtn     = document.getElementById('settings-btn');
+const settingsOverlay = document.getElementById('settings-overlay');
+const settingsClose   = document.getElementById('settings-close');
+const settingsSave    = document.getElementById('settings-save');
+const sandboxUrlInput = document.getElementById('sandbox-url-input');
+const openSandboxBtn  = document.getElementById('open-sandbox-btn');
+
+// Load saved sandbox URL
+chrome.storage.local.get('sandboxUrl', function(data) {
+  if (data.sandboxUrl) {
+    sandboxUrl = data.sandboxUrl;
+    sandboxUrlInput.value = sandboxUrl;
+  }
+  updateSandboxBtn();
+});
+
+settingsBtn.addEventListener('click', function() {
+  settingsOverlay.classList.remove('hidden');
+  sandboxUrlInput.focus();
+  sandboxUrlInput.select();
+});
+
+settingsClose.addEventListener('click', function() {
+  settingsOverlay.classList.add('hidden');
+});
+
+settingsOverlay.addEventListener('click', function(e) {
+  if (e.target === settingsOverlay) settingsOverlay.classList.add('hidden');
+});
+
+settingsSave.addEventListener('click', function() {
+  const val = sandboxUrlInput.value.trim();
+  sandboxUrl = val;
+  chrome.storage.local.set({ sandboxUrl: val });
+  updateSandboxBtn();
+  settingsOverlay.classList.add('hidden');
+});
+
+// Also save on Enter key
+sandboxUrlInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') settingsSave.click();
+  if (e.key === 'Escape') settingsClose.click();
+});
+
+function updateSandboxBtn() {
+  if (openSandboxBtn) {
+    openSandboxBtn.disabled = !sandboxUrl;
+    openSandboxBtn.title = sandboxUrl
+      ? 'Open in sandbox: ' + sandboxUrl
+      : 'Configure a sandbox URL in Settings (⚙)';
+  }
+}
 
 // ── DOM refs ───────────────────────────────────────────────────
 const requestList          = document.getElementById('request-list');
@@ -299,6 +355,28 @@ function populateDetail(req) {
   }
 
   copyQueryBtn.onclick = () => copyToClipboard(normalizeQuery(req.query), copyQueryBtn);
+
+  openSandboxBtn.onclick = function() {
+    if (!sandboxUrl) return;
+    const query     = normalizeQuery(req.query);
+    const variables = req.variables ? JSON.stringify(req.variables, null, 2) : '{}';
+    // Apollo Sandbox uses ?document= + ?endpoint=
+    // GraphiQL uses ?query=
+    // We support both by detecting the sandbox URL
+    let url;
+    if (sandboxUrl.includes('studio.apollographql.com') || sandboxUrl.includes('apollographql')) {
+      url = sandboxUrl
+        + '?endpoint='  + encodeURIComponent(req.url)
+        + '&document='  + encodeURIComponent(query)
+        + '&variables=' + encodeURIComponent(variables);
+    } else {
+      // Generic GraphiQL-compatible format
+      url = sandboxUrl
+        + '?query='     + encodeURIComponent(query)
+        + '&variables=' + encodeURIComponent(variables);
+    }
+    chrome.tabs.create({ url });
+  };
   copyVariablesBtn.onclick = () => copyToClipboard(
     JSON.stringify(req.variables, null, 2), copyVariablesBtn
   );
