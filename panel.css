@@ -253,6 +253,35 @@ html, body {
   max-width: 160px;
 }
 
+.item-sandbox-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  color: var(--syn-field);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s;
+  margin-left: 4px;
+}
+.item-sandbox-btn:hover {
+  background: rgba(77,156,254,0.15);
+  border-color: var(--accent);
+  color: var(--text-bright);
+}
+.item-sandbox-btn:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
 .status-badge {
   flex-shrink: 0;
   font-size: 10px;

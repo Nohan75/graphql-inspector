@@ -287,15 +287,52 @@ function renderRequestList() {
 
     const shortUrl = shortenUrl(req.url);
 
-    item.innerHTML =
-      '<div class="type-badge ' + req.operationType + '">' + badgeLetter + '</div>' +
-      '<div class="request-info">' +
-        '<div class="request-name">' + escapeHtml(req.operationName) + '</div>' +
-        '<div class="request-meta">' +
-          '<span class="request-url">' + escapeHtml(shortUrl) + '</span>' +
-        '</div>' +
-      '</div>' +
-      '<span class="status-badge ' + statusCls + '">' + statusTxt + '</span>';
+    // Badge
+    const badge = document.createElement('div');
+    badge.className = 'type-badge ' + req.operationType;
+    badge.textContent = badgeLetter;
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'request-info';
+    info.innerHTML =
+      '<div class="request-name">' + escapeHtml(req.operationName) + '</div>' +
+      '<div class="request-meta"><span class="request-url">' + escapeHtml(shortUrl) + '</span></div>';
+
+    // Status
+    const status = document.createElement('span');
+    status.className = 'status-badge ' + statusCls;
+    status.textContent = statusTxt;
+
+    // Open in sandbox button (visible on hover)
+    const sandboxItemBtn = document.createElement('button');
+    sandboxItemBtn.className = 'item-sandbox-btn';
+    sandboxItemBtn.title = sandboxUrl ? 'Open in sandbox' : 'Configure a sandbox URL in Settings (⚙)';
+    sandboxItemBtn.textContent = '↗';
+    sandboxItemBtn.disabled = !sandboxUrl;
+    sandboxItemBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!sandboxUrl) return;
+      const query     = normalizeQuery(req.query);
+      const variables = req.variables ? JSON.stringify(req.variables, null, 2) : '{}';
+      let url;
+      if (sandboxUrl.includes('apollographql')) {
+        url = sandboxUrl
+          + '?endpoint='  + encodeURIComponent(req.url)
+          + '&document='  + encodeURIComponent(query)
+          + '&variables=' + encodeURIComponent(variables);
+      } else {
+        url = sandboxUrl
+          + '?query='     + encodeURIComponent(query)
+          + '&variables=' + encodeURIComponent(variables);
+      }
+      chrome.tabs.create({ url });
+    });
+
+    item.appendChild(badge);
+    item.appendChild(info);
+    item.appendChild(status);
+    item.appendChild(sandboxItemBtn);
 
     item.addEventListener('click', function() {
       selectRequest(req.id);
