@@ -8,6 +8,7 @@ import { useSettings } from '../hooks/useSettings';
 import type { GQLRequest } from '../types';
 
 const MIN_SIDEBAR_WIDTH = 180;
+const MIN_DETAIL_WIDTH = 250;
 const HANDLE_WIDTH = 4;
 const DEFAULT_SIDEBAR_WIDTH = 280;
 
@@ -60,9 +61,10 @@ export function App() {
     if (!isDragging.current) return;
     const delta = e.clientX - dragStartX.current;
     const containerWidth = mainAreaRef.current?.offsetWidth ?? 9999;
+    const maxSidebarWidth = containerWidth - MIN_DETAIL_WIDTH - HANDLE_WIDTH;
     const newWidth = Math.max(
       MIN_SIDEBAR_WIDTH,
-      Math.min(containerWidth - HANDLE_WIDTH, dragStartWidth.current + delta)
+      Math.min(maxSidebarWidth, dragStartWidth.current + delta)
     );
     setSidebarWidth(newWidth);
   }, []);
