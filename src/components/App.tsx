@@ -8,7 +8,8 @@ import { useSettings } from '../hooks/useSettings';
 import type { GQLRequest } from '../types';
 
 const MIN_SIDEBAR_WIDTH = 180;
-const MAX_SIDEBAR_WIDTH = 600;
+const MIN_DETAIL_WIDTH = 150;  // detail panel never goes below this
+const HANDLE_WIDTH = 4;
 const DEFAULT_SIDEBAR_WIDTH = 280;
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(DEFAULT_SIDEBAR_WIDTH);
+  const mainAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-select first request if nothing is selected
   useEffect(() => {
@@ -58,9 +60,11 @@ export function App() {
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging.current) return;
     const delta = e.clientX - dragStartX.current;
+    const containerWidth = mainAreaRef.current?.offsetWidth ?? 9999;
+    const maxSidebarWidth = containerWidth - MIN_DETAIL_WIDTH - HANDLE_WIDTH;
     const newWidth = Math.max(
       MIN_SIDEBAR_WIDTH,
-      Math.min(MAX_SIDEBAR_WIDTH, dragStartWidth.current + delta)
+      Math.min(maxSidebarWidth, dragStartWidth.current + delta)
     );
     setSidebarWidth(newWidth);
   }, []);
@@ -89,7 +93,7 @@ export function App() {
       />
 
       {/* Main area: sidebar + resizer + detail */}
-      <div className="flex-1 flex overflow-hidden">
+      <div ref={mainAreaRef} className="flex-1 flex overflow-hidden">
         {/* Sidebar — width is dynamic (drag resizable), kept as inline style */}
         <div
           style={{ width: sidebarWidth }}
