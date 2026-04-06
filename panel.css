@@ -801,6 +801,12 @@ html, body {
   opacity: 0.3;
 }
 
+.jt-search-current {
+  background: rgba(255, 160, 0, 0.28) !important;
+  outline: 1px solid rgba(255, 160, 0, 0.6);
+  border-radius: 2px;
+}
+
 /* ── Error highlight ─────────────────────────────────────── */
 .error-notice {
   display: flex;

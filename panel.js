@@ -479,8 +479,23 @@ const responseSearch      = document.getElementById('response-search');
 const responseSearchClear = document.getElementById('response-search-clear');
 const responseSearchCount = document.getElementById('response-search-count');
 
+let searchMatches     = [];
+let searchCurrentIdx  = -1;
+
 responseSearch.addEventListener('input', function() {
   applyResponseSearch(responseSearch.value);
+});
+
+responseSearch.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' || searchMatches.length === 0) return;
+  e.preventDefault();
+  // Shift+Enter → previous, Enter → next
+  if (e.shiftKey) {
+    searchCurrentIdx = (searchCurrentIdx - 1 + searchMatches.length) % searchMatches.length;
+  } else {
+    searchCurrentIdx = (searchCurrentIdx + 1) % searchMatches.length;
+  }
+  scrollToMatch(searchCurrentIdx);
 });
 
 responseSearchClear.addEventListener('click', function() {
@@ -489,17 +504,41 @@ responseSearchClear.addEventListener('click', function() {
   responseSearch.focus();
 });
 
+function scrollToMatch(idx) {
+  // Remove current highlight from all
+  searchMatches.forEach(function(row) {
+    row.classList.remove('jt-search-current');
+  });
+  const target = searchMatches[idx];
+  if (!target) return;
+  target.classList.add('jt-search-current');
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  updateSearchCount();
+}
+
+function updateSearchCount() {
+  if (searchMatches.length === 0) {
+    responseSearchCount.textContent = '';
+    return;
+  }
+  const pos = searchCurrentIdx >= 0 ? (searchCurrentIdx + 1) + ' / ' : '';
+  responseSearchCount.textContent = pos + searchMatches.length + ' match' + (searchMatches.length !== 1 ? 'es' : '');
+}
+
 function applyResponseSearch(term) {
   const trimmed = term.trim().toLowerCase();
   const rows    = responseDisplay.querySelectorAll('.jt-row');
+
+  // Reset navigation state
+  searchMatches    = [];
+  searchCurrentIdx = -1;
 
   // Show/hide clear button
   responseSearchClear.classList.toggle('hidden', !trimmed);
 
   // Reset all rows
   rows.forEach(function(row) {
-    row.classList.remove('jt-search-match', 'jt-search-dim');
-    // Restore original visibility based on collapse state
+    row.classList.remove('jt-search-match', 'jt-search-dim', 'jt-search-current');
     row.style.display = row._hiddenBy && row._hiddenBy.size > 0 ? 'none' : '';
   });
 
@@ -508,21 +547,19 @@ function applyResponseSearch(term) {
     return;
   }
 
-  let matchCount = 0;
-
   rows.forEach(function(row) {
     const text = row.textContent.toLowerCase();
     if (text.includes(trimmed)) {
       row.classList.add('jt-search-match');
-      row.style.display = ''; // Force visible even if collapsed
-      matchCount++;
+      row.style.display = '';
+      searchMatches.push(row);
     } else {
       row.classList.add('jt-search-dim');
-      row.style.display = ''; // Show dimmed (expand all while searching)
+      row.style.display = '';
     }
   });
 
-  responseSearchCount.textContent = matchCount + ' match' + (matchCount !== 1 ? 'es' : '');
+  updateSearchCount();
 }
 
 // Clear search when selecting a new request
