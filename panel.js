@@ -375,6 +375,7 @@ function selectRequest(id) {
   noSelection.classList.add('hidden');
   requestDetail.classList.remove('hidden');
 
+  clearResponseSearch();
   populateDetail(req);
 }
 
@@ -470,6 +471,64 @@ function renderHeadersTable(table, headers) {
     key.textContent = h.name;
     val.textContent = h.value;
   });
+}
+
+// ── Response search ────────────────────────────────────────────
+
+const responseSearch      = document.getElementById('response-search');
+const responseSearchClear = document.getElementById('response-search-clear');
+const responseSearchCount = document.getElementById('response-search-count');
+
+responseSearch.addEventListener('input', function() {
+  applyResponseSearch(responseSearch.value);
+});
+
+responseSearchClear.addEventListener('click', function() {
+  responseSearch.value = '';
+  applyResponseSearch('');
+  responseSearch.focus();
+});
+
+function applyResponseSearch(term) {
+  const trimmed = term.trim().toLowerCase();
+  const rows    = responseDisplay.querySelectorAll('.jt-row');
+
+  // Show/hide clear button
+  responseSearchClear.classList.toggle('hidden', !trimmed);
+
+  // Reset all rows
+  rows.forEach(function(row) {
+    row.classList.remove('jt-search-match', 'jt-search-dim');
+    // Restore original visibility based on collapse state
+    row.style.display = row._hiddenBy && row._hiddenBy.size > 0 ? 'none' : '';
+  });
+
+  if (!trimmed) {
+    responseSearchCount.textContent = '';
+    return;
+  }
+
+  let matchCount = 0;
+
+  rows.forEach(function(row) {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(trimmed)) {
+      row.classList.add('jt-search-match');
+      row.style.display = ''; // Force visible even if collapsed
+      matchCount++;
+    } else {
+      row.classList.add('jt-search-dim');
+      row.style.display = ''; // Show dimmed (expand all while searching)
+    }
+  });
+
+  responseSearchCount.textContent = matchCount + ' match' + (matchCount !== 1 ? 'es' : '');
+}
+
+// Clear search when selecting a new request
+function clearResponseSearch() {
+  responseSearch.value = '';
+  applyResponseSearch('');
 }
 
 // ── Tabs ───────────────────────────────────────────────────────

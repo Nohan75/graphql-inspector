@@ -116,9 +116,16 @@
           <div id="response-error-notice" class="hidden"></div>
           <div class="section-header">
             <span class="section-title">Response</span>
-            <button class="copy-btn" id="copy-response">Copy</button>
+            <div class="section-actions">
+              <div id="response-search-wrap">
+                <input id="response-search" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
+                <button id="response-search-clear" class="hidden">✕</button>
+                <span id="response-search-count"></span>
+              </div>
+              <button class="copy-btn" id="copy-response">Copy</button>
+            </div>
           </div>
-          <div class="json-tree" id="response-display"></div>
+          <div id="response-display"></div>
         </div>
 
         <!-- Tab: Response Raw -->

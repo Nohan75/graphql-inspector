@@ -742,6 +742,65 @@ html, body {
   color: var(--text);
 }
 
+/* ── Response search ─────────────────────────────────────── */
+#response-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  padding: 0 6px;
+  height: 22px;
+}
+#response-search-wrap:focus-within {
+  border-color: var(--accent);
+}
+
+#response-search {
+  width: 140px;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 11px;
+  height: 100%;
+}
+#response-search::placeholder { color: var(--text-dim); }
+
+#response-search-clear {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0;
+  line-height: 1;
+}
+#response-search-clear:hover { color: var(--text); }
+
+#response-search-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Row highlight states during search */
+.jt-search-match {
+  background: rgba(255, 200, 0, 0.12) !important;
+  border-radius: 2px;
+}
+.jt-search-match .jt-key,
+.jt-search-match .jt-string,
+.jt-search-match .jt-number,
+.jt-search-match .jt-boolean,
+.jt-search-match .jt-null {
+  font-weight: 600;
+}
+.jt-search-dim {
+  opacity: 0.3;
+}
+
 /* ── Error highlight ─────────────────────────────────────── */
 .error-notice {
   display: flex;
