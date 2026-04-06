@@ -2,6 +2,40 @@ import React, { useState, useCallback, useRef } from 'react';
 import type { GQLRequest } from '../types';
 import { JsonTree } from './JsonTree';
 
+function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  setCopied(true);
+  setTimeout(() => setCopied(false), 1500);
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => copyToClipboard(text, setCopied)}
+      style={{
+        background: 'none',
+        border: `1px solid ${copied ? '#4caf50' : 'var(--color-border)'}`,
+        borderRadius: '3px',
+        color: copied ? '#4caf50' : 'var(--color-text-muted)',
+        fontSize: '10px',
+        padding: '2px 8px',
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+}
+
 interface ResponseTabProps {
   request: GQLRequest;
 }
@@ -55,7 +89,7 @@ export function ResponseTab({ request }: ResponseTabProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Search bar */}
+      {/* Search bar + Copy */}
       <div
         style={{
           display: 'flex',
@@ -112,6 +146,7 @@ export function ResponseTab({ request }: ResponseTabProps) {
             </button>
           </>
         )}
+        <CopyButton text={JSON.stringify(request.response, null, 2)} />
       </div>
 
       {/* JSON tree */}

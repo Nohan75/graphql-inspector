@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 
 interface JsonTreeProps {
   data: unknown;
@@ -168,6 +168,7 @@ export function JsonTree({
   onMatchesFound,
 }: JsonTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const nodes = useMemo(() => {
     const list: FlatNode[] = [];
@@ -232,6 +233,15 @@ export function JsonTree({
   const currentMatchNodeKey =
     matchTotal > 0 ? matchNodeKeys[currentMatchIndex % matchTotal] : -1;
 
+  // Scroll to current match when it changes
+  useEffect(() => {
+    if (currentMatchNodeKey === -1) return;
+    const el = rowRefs.current.get(currentMatchNodeKey);
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [currentMatchNodeKey]);
+
   return (
     <div
       style={{
@@ -288,6 +298,10 @@ export function JsonTree({
         return (
           <div
             key={node.key}
+            ref={(el) => {
+              if (el) rowRefs.current.set(node.key, el);
+              else rowRefs.current.delete(node.key);
+            }}
             style={{
               display: 'flex',
               alignItems: 'baseline',
