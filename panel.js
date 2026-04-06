@@ -896,6 +896,46 @@ function renderJsonTree(rootValue) {
   return container;
 }
 
+// ── Resizer ────────────────────────────────────────────────────
+
+(function() {
+  const resizer = document.getElementById('resizer');
+  const sidebar = document.getElementById('sidebar');
+  let isResizing = false;
+  let startX     = 0;
+  let startWidth = 0;
+
+  // Restore saved width
+  chrome.storage.local.get('sidebarWidth', function(data) {
+    if (data.sidebarWidth) sidebar.style.width = data.sidebarWidth + 'px';
+  });
+
+  resizer.addEventListener('mousedown', function(e) {
+    isResizing = true;
+    startX     = e.clientX;
+    startWidth = sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isResizing) return;
+    const newWidth = Math.max(160, Math.min(600, startWidth + e.clientX - startX));
+    sidebar.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isResizing) return;
+    isResizing = false;
+    resizer.classList.remove('dragging');
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+    chrome.storage.local.set({ sidebarWidth: sidebar.offsetWidth });
+  });
+})();
+
 // ── Init ───────────────────────────────────────────────────────
 
 // Ensure empty state is visible on load
