@@ -15,9 +15,8 @@ export function validateSandboxUrl(url: string): boolean {
 
 /**
  * Build an Apollo Sandbox URL for the given query.
- * Uses encodeURIComponent (not URLSearchParams) so spaces become %20
- * instead of +, which Apollo Sandbox expects when it decodes via
- * decodeURIComponent.
+ * Uses the documented format: ?endpoint=&document=&variables=
+ * Ref: https://www.apollographql.com/docs/graphos/explorer/sandbox
  */
 export function buildApolloSandboxUrl(
   sandboxBase: string,
@@ -25,15 +24,13 @@ export function buildApolloSandboxUrl(
   variables: Record<string, unknown> | null,
   endpoint: string
 ): string {
-  const state = JSON.stringify({
-    document: query,
-    variables: variables ? JSON.stringify(variables, null, 2) : '',
-    headers: '{}',
-  });
   return (
     `${sandboxBase}` +
     `?endpoint=${encodeURIComponent(endpoint)}` +
-    `&explorerURLState=${encodeURIComponent(state)}`
+    `&document=${encodeURIComponent(query)}` +
+    (variables
+      ? `&variables=${encodeURIComponent(JSON.stringify(variables, null, 2))}`
+      : '')
   );
 }
 

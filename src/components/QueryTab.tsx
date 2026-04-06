@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { GQLRequest } from '../types';
 import { QueryEditor } from './QueryEditor';
 import { JsonTree } from './JsonTree';
 import { useSettings } from '../hooks/useSettings';
+import { stripCommonIndent } from '../utils/graphql';
 import { validateSandboxUrl, buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
 import { parse, print } from 'graphql';
 
@@ -60,14 +61,23 @@ export function QueryTab({ request }: QueryTabProps) {
   const [showVariables, setShowVariables] = useState(true);
   const { settings } = useSettings();
 
-  const normalizedQuery = (() => {
-    try { return print(parse(request.query)); } catch { return request.query.trim(); }
-  })();
+  const normalizedQuery = useMemo(() => {
+    try {
+      return print(parse(request.query));
+    } catch {
+      // Fallback: strip common indentation when graphql parse fails
+      return stripCommonIndent(request.query.trim());
+    }
+  }, [request.query]);
+
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
+
+  const isApolloSandbox = (url: string) =>
+    url.includes('apollographql') || url.includes('apollo.dev');
 
   const handleOpenSandbox = () => {
     if (!sandboxReady) return;
-    const url = settings.sandboxUrl.includes('apollographql')
+    const url = isApolloSandbox(settings.sandboxUrl)
       ? buildApolloSandboxUrl(settings.sandboxUrl, normalizedQuery, request.variables, request.url)
       : buildGraphiQLUrl(settings.sandboxUrl, normalizedQuery, request.variables);
     openInSandbox(url);

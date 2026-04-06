@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { parse, print } from 'graphql';
 import { tokenizeLine, tokenClassMap } from '../utils/highlight';
+import { stripCommonIndent } from '../utils/graphql';
 
 interface QueryEditorProps {
   query: string;
@@ -61,8 +62,8 @@ export function QueryEditor({ query }: QueryEditorProps) {
     try {
       return print(parse(query));
     } catch {
-      // Fallback to raw query if parsing fails (e.g. incomplete queries)
-      return query.trim();
+      // Fallback: strip common indentation when graphql parse fails
+      return stripCommonIndent(query.trim());
     }
   }, [query]);
   const rawLines = useMemo(() => normalizedQuery.split('\n'), [normalizedQuery]);
