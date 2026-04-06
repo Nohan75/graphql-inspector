@@ -7,6 +7,8 @@ import {
 } from '../utils/graphql';
 
 const MAX_REQUESTS = 500;
+const MAX_QUERY_LENGTH = 500_000;   // 500 KB
+const MAX_BODY_LENGTH = 2_000_000;  // 2 MB
 let requestIdCounter = 0;
 
 export function useRequests(preserveLog: boolean) {
@@ -36,9 +38,13 @@ export function useRequests(preserveLog: boolean) {
 
       const { query, variables, operationName } = parsed;
 
+      // Reject abnormally large queries (e.g. generated/injected payloads)
+      if (query.length > MAX_QUERY_LENGTH) return;
+
       request.getContent((body) => {
         let response: unknown = null;
-        let responseRaw = body ?? '';
+        // Truncate oversized response bodies to avoid memory exhaustion
+        let responseRaw = (body ?? '').slice(0, MAX_BODY_LENGTH);
 
         try {
           response = JSON.parse(responseRaw);

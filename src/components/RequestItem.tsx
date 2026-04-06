@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GQLRequest } from '../types';
 import { buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
 import { parse, print } from 'graphql';
@@ -35,13 +35,15 @@ export function RequestItem({
   onClick,
   sandboxUrl,
 }: RequestItemProps) {
+  const [sandboxError, setSandboxError] = useState(false);
   const badge = BADGE_LABELS[request.operationType] ?? 'Q';
   const badgeColor = BADGE_COLORS[request.operationType] ?? 'var(--color-badge-query)';
 
   const handleSandbox = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!validateSandboxUrl(sandboxUrl)) {
-      alert('Invalid sandbox URL. Please check your settings.');
+      setSandboxError(true);
+      setTimeout(() => setSandboxError(false), 3000);
       return;
     }
     let normalizedQuery: string;
@@ -142,36 +144,47 @@ export function RequestItem({
         {request.status}
       </span>
 
-      {/* Sandbox button */}
-      <button
-        onClick={handleSandbox}
-        title="Open in Sandbox"
-        style={{
-          background: 'none',
-          border: '1px solid var(--color-border)',
-          color: 'var(--color-text-muted)',
-          borderRadius: '3px',
-          padding: '1px 5px',
+      {/* Sandbox button + inline error */}
+      {sandboxError ? (
+        <span style={{
+          color: 'var(--color-error)',
           fontSize: '10px',
-          cursor: 'pointer',
           flexShrink: 0,
-          lineHeight: '16px',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color =
-            'var(--color-text)';
-          (e.currentTarget as HTMLButtonElement).style.borderColor =
-            'var(--color-accent)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color =
-            'var(--color-text-muted)';
-          (e.currentTarget as HTMLButtonElement).style.borderColor =
-            'var(--color-border)';
-        }}
-      >
-        ↗
-      </button>
+          whiteSpace: 'nowrap',
+        }}>
+          Invalid URL
+        </span>
+      ) : (
+        <button
+          onClick={handleSandbox}
+          title="Open in Sandbox"
+          style={{
+            background: 'none',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-muted)',
+            borderRadius: '3px',
+            padding: '1px 5px',
+            fontSize: '10px',
+            cursor: 'pointer',
+            flexShrink: 0,
+            lineHeight: '16px',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color =
+              'var(--color-text)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              'var(--color-accent)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color =
+              'var(--color-text-muted)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              'var(--color-border)';
+          }}
+        >
+          ↗
+        </button>
+      )}
     </div>
   );
 }
