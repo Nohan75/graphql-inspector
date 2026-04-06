@@ -3,8 +3,8 @@ import type { GQLRequest } from '../types';
 import { QueryEditor } from './QueryEditor';
 import { JsonTree } from './JsonTree';
 import { useSettings } from '../hooks/useSettings';
-import { stripCommonIndent } from '../utils/graphql';
 import { validateSandboxUrl, buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
+import { parse, print } from 'graphql';
 
 interface QueryTabProps {
   request: GQLRequest;
@@ -60,7 +60,9 @@ export function QueryTab({ request }: QueryTabProps) {
   const [showVariables, setShowVariables] = useState(true);
   const { settings } = useSettings();
 
-  const normalizedQuery = stripCommonIndent(request.query.trimEnd());
+  const normalizedQuery = (() => {
+    try { return print(parse(request.query)); } catch { return request.query.trim(); }
+  })();
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
   const handleOpenSandbox = () => {

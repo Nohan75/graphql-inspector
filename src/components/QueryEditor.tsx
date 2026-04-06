@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { parse, print } from 'graphql';
 import { tokenizeLine, tokenClassMap } from '../utils/highlight';
-import { stripCommonIndent } from '../utils/graphql';
 
 interface QueryEditorProps {
   query: string;
@@ -57,10 +57,14 @@ function buildLineInfos(lines: string[]): LineInfo[] {
 export function QueryEditor({ query }: QueryEditorProps) {
   const [collapsedLines, setCollapsedLines] = useState<Set<number>>(new Set());
 
-  const normalizedQuery = useMemo(
-    () => stripCommonIndent(query.trimEnd()),
-    [query]
-  );
+  const normalizedQuery = useMemo(() => {
+    try {
+      return print(parse(query));
+    } catch {
+      // Fallback to raw query if parsing fails (e.g. incomplete queries)
+      return query.trim();
+    }
+  }, [query]);
   const rawLines = useMemo(() => normalizedQuery.split('\n'), [normalizedQuery]);
   const lineInfos = useMemo(() => buildLineInfos(rawLines), [rawLines]);
 
