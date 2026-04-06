@@ -279,7 +279,7 @@ export function JsonTree({
 
         // Build value part
         const valueEl = (
-          <span className={`${valueClass} break-all`}>
+          <span className={`${valueClass} break-words`}>
             {searchTerm && hasMatch
               ? highlightText(vp, searchTerm, isCurrentMatch, 0)
               : vp}
