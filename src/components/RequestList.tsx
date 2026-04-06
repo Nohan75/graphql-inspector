@@ -40,22 +40,12 @@ export function RequestList({
     return (
       <div
         ref={listRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--color-text-muted)',
-          fontSize: '12px',
-          flexDirection: 'column',
-          gap: '6px',
-        }}
+        className="flex-1 overflow-y-auto flex flex-col items-center justify-center text-text-muted text-xs gap-1.5"
       >
         {requests.length === 0 ? (
           <>
             <div>No GraphQL requests captured</div>
-            <div style={{ fontSize: '11px' }}>Make a request to get started</div>
+            <div className="text-[11px]">Make a request to get started</div>
           </>
         ) : (
           <div>No requests match the filter</div>
@@ -65,13 +55,7 @@ export function RequestList({
   }
 
   return (
-    <div
-      ref={listRef}
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-      }}
-    >
+    <div ref={listRef} className="flex-1 overflow-y-auto">
       {filtered.map((req) => (
         <RequestItem
           key={req.id}

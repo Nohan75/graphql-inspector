@@ -21,58 +21,25 @@ export function DetailPanel({ request }: DetailPanelProps) {
 
   if (!request) {
     return (
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--color-text-muted)',
-          fontSize: '12px',
-        }}
-      >
+      <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
         Select a request to inspect
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        backgroundColor: 'var(--color-bg)',
-      }}
-    >
+    <div className="flex-1 flex flex-col min-w-0 bg-bg">
       {/* Tab bar */}
-      <div
-        style={{
-          display: 'flex',
-          borderBottom: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-toolbar)',
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex border-b border-border bg-toolbar shrink-0">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            style={{
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === tab.id
-                ? '2px solid var(--color-accent)'
-                : '2px solid transparent',
-              color: activeTab === tab.id
-                ? 'var(--color-text)'
-                : 'var(--color-text-muted)',
-              padding: '7px 14px',
-              fontSize: '12px',
-              cursor: 'pointer',
-              transition: 'color 0.1s',
-            }}
+            className={`bg-transparent border-0 border-b-2 px-[14px] py-[7px] text-xs cursor-pointer transition-colors
+              ${activeTab === tab.id
+                ? 'border-b-accent text-text'
+                : 'border-b-transparent text-text-muted hover:text-text'
+              }`}
           >
             {tab.label}
           </button>
@@ -80,11 +47,11 @@ export function DetailPanel({ request }: DetailPanelProps) {
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {activeTab === 'headers' && <HeadersTab request={request} />}
-        {activeTab === 'request' && <QueryTab request={request} />}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'headers'  && <HeadersTab request={request} />}
+        {activeTab === 'request'  && <QueryTab request={request} />}
         {activeTab === 'response' && <ResponseTab request={request} />}
-        {activeTab === 'raw' && <RawTab request={request} />}
+        {activeTab === 'raw'      && <RawTab request={request} />}
       </div>
     </div>
   );

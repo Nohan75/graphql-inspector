@@ -20,16 +20,11 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => copyToClipboard(text, setCopied)}
-      style={{
-        background: 'none',
-        border: `1px solid ${copied ? '#4caf50' : 'var(--color-border)'}`,
-        borderRadius: '3px',
-        color: copied ? '#4caf50' : 'var(--color-text-muted)',
-        fontSize: '10px',
-        padding: '2px 8px',
-        cursor: 'pointer',
-        flexShrink: 0,
-      }}
+      className={`bg-transparent rounded-[3px] text-[10px] px-2 py-[2px] cursor-pointer border shrink-0
+        ${copied
+          ? 'border-success text-success'
+          : 'border-border text-text-muted hover:text-text hover:border-accent'
+        }`}
     >
       {copied ? 'Copied!' : 'Copy'}
     </button>
@@ -76,31 +71,16 @@ export function ResponseTab({ request }: ResponseTabProps) {
 
   if (request.response === null) {
     return (
-      <div
-        style={{
-          padding: '12px',
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <div className="p-3 text-text-muted">
         No response data
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="h-full flex flex-col">
       {/* Search bar + Copy */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 8px',
-          borderBottom: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-toolbar)',
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-toolbar shrink-0">
         <input
           ref={inputRef}
           type="text"
@@ -111,35 +91,18 @@ export function ResponseTab({ request }: ResponseTabProps) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search response… (Enter / Shift+Enter)"
-          style={{
-            flex: 1,
-            background: 'var(--color-bg)',
-            color: 'var(--color-text)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '3px',
-            padding: '3px 8px',
-            fontSize: '12px',
-            outline: 'none',
-          }}
+          className="flex-1 bg-bg text-text border border-border rounded-[3px] px-2 py-[3px] text-xs outline-none"
         />
         {searchTerm && (
           <>
-            <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', whiteSpace: 'nowrap' }}>
+            <span className="text-text-muted text-[11px] whitespace-nowrap">
               {matchCount > 0
                 ? `${currentMatch + 1} / ${matchCount}`
                 : 'No matches'}
             </span>
             <button
               onClick={handleClear}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0 4px',
-                fontSize: '14px',
-                lineHeight: 1,
-              }}
+              className="bg-transparent border-0 text-text-muted cursor-pointer px-1 text-sm leading-none"
               title="Clear search"
             >
               ×
@@ -150,7 +113,7 @@ export function ResponseTab({ request }: ResponseTabProps) {
       </div>
 
       {/* JSON tree */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+      <div className="flex-1 overflow-y-auto py-2">
         <JsonTree
           data={request.response}
           searchTerm={searchTerm}

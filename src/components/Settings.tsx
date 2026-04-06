@@ -31,48 +31,19 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
   return (
     /* Backdrop */
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000]"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Modal */}
       <div
-        style={{
-          background: 'var(--color-sidebar)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '6px',
-          padding: '20px',
-          width: '420px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        }}
+        className="bg-sidebar border border-border rounded-[6px] p-5 w-[420px] shadow-2xl"
         onKeyDown={handleKeyDown}
       >
-        <h2
-          style={{
-            margin: '0 0 16px',
-            fontSize: '14px',
-            fontWeight: 600,
-            color: 'var(--color-text)',
-          }}
-        >
+        <h2 className="m-0 mb-4 text-sm font-semibold text-text">
           Settings
         </h2>
 
-        <label
-          style={{
-            display: 'block',
-            marginBottom: '6px',
-            fontSize: '12px',
-            color: 'var(--color-text-muted)',
-          }}
-        >
+        <label className="block mb-1.5 text-xs text-text-muted">
           Sandbox URL
         </label>
         <input
@@ -81,73 +52,27 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
           value={sandboxUrl}
           onChange={(e) => { setSandboxUrl(e.target.value); setError(''); }}
           placeholder="https://studio.apollographql.com/sandbox/explorer"
-          style={{
-            width: '100%',
-            background: 'var(--color-bg)',
-            color: 'var(--color-text)',
-            border: `1px solid ${error ? 'var(--color-error)' : 'var(--color-border)'}`,
-            borderRadius: '3px',
-            padding: '6px 10px',
-            fontSize: '12px',
-            outline: 'none',
-            fontFamily: "'Consolas', monospace",
-          }}
+          className={`w-full bg-bg text-text rounded-[3px] px-[10px] py-1.5 text-xs outline-none font-mono border
+            ${error ? 'border-error' : 'border-border'}`}
         />
         {error && (
-          <div
-            style={{
-              color: 'var(--color-error)',
-              fontSize: '11px',
-              marginTop: '4px',
-            }}
-          >
-            {error}
-          </div>
+          <div className="text-error text-[11px] mt-1">{error}</div>
         )}
 
-        <div
-          style={{
-            marginTop: '8px',
-            fontSize: '11px',
-            color: 'var(--color-text-muted)',
-          }}
-        >
+        <div className="mt-2 text-[11px] text-text-muted">
           Used for "Open in Sandbox" button. Must be http:// or https://.
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '8px',
-            marginTop: '20px',
-          }}
-        >
+        <div className="flex justify-end gap-2 mt-5">
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text)',
-              borderRadius: '3px',
-              padding: '5px 14px',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
+            className="bg-transparent border border-border text-text rounded-[3px] px-[14px] py-[5px] text-xs cursor-pointer hover:text-text"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            style={{
-              background: 'var(--color-accent)',
-              border: 'none',
-              color: '#fff',
-              borderRadius: '3px',
-              padding: '5px 14px',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
+            className="bg-accent border-0 text-white rounded-[3px] px-[14px] py-[5px] text-xs cursor-pointer hover:bg-accent-hover"
           >
             Save
           </button>

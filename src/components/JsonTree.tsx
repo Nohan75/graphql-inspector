@@ -148,7 +148,6 @@ function highlightText(
       <mark
         key={idx}
         className={isCurrent ? 'jt-search-current' : 'jt-search-match'}
-        style={{ background: 'none' }}
       >
         {text.slice(idx, idx + searchTerm.length)}
       </mark>
@@ -243,14 +242,7 @@ export function JsonTree({
   }, [currentMatchNodeKey]);
 
   return (
-    <div
-      style={{
-        fontFamily: "'Consolas', 'Courier New', monospace",
-        fontSize: '12px',
-        lineHeight: '20px',
-        color: 'var(--color-text)',
-      }}
-    >
+    <div className="code-font">
       {nodes.map((node) => {
         if (hiddenNodes.has(node.key)) return null;
 
@@ -259,14 +251,25 @@ export function JsonTree({
           searchTerm &&
           node.searchText.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const indent = node.depth * 16;
+        // Value color class
+        let valueClass = 'text-text';
+        const vp = node.valuePreview;
+        if (vp === 'null' || vp === 'true' || vp === 'false') {
+          valueClass = 'text-syn-keyword';
+        } else if (vp.startsWith('"')) {
+          valueClass = 'text-syn-string';
+        } else if (!isNaN(Number(vp)) && vp !== '') {
+          valueClass = 'text-syn-number';
+        } else if (vp.startsWith('{') || vp.startsWith('[') || vp === '}' || vp === ']') {
+          valueClass = 'text-syn-brace';
+        }
 
         // Build label part
         let labelEl: React.ReactNode = null;
         if (node.label !== null) {
           const labelText = `${node.label}: `;
           labelEl = (
-            <span style={{ color: 'var(--color-syn-field)' }}>
+            <span className="text-syn-field">
               {searchTerm && hasMatch
                 ? highlightText(labelText, searchTerm, isCurrentMatch, 0)
                 : labelText}
@@ -275,20 +278,8 @@ export function JsonTree({
         }
 
         // Build value part
-        let valueColor = 'var(--color-text)';
-        const vp = node.valuePreview;
-        if (vp === 'null' || vp === 'true' || vp === 'false') {
-          valueColor = 'var(--color-syn-keyword)';
-        } else if (vp.startsWith('"')) {
-          valueColor = 'var(--color-syn-string)';
-        } else if (!isNaN(Number(vp)) && vp !== '') {
-          valueColor = '#b5cea8';
-        } else if (vp.startsWith('{') || vp.startsWith('[') || vp === '}' || vp === ']') {
-          valueColor = 'var(--color-syn-brace)';
-        }
-
         const valueEl = (
-          <span style={{ color: valueColor }}>
+          <span className={valueClass}>
             {searchTerm && hasMatch
               ? highlightText(vp, searchTerm, isCurrentMatch, 0)
               : vp}
@@ -302,22 +293,19 @@ export function JsonTree({
               if (el) rowRefs.current.set(node.key, el);
               else rowRefs.current.delete(node.key);
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              backgroundColor:
-                isCurrentMatch && searchTerm
-                  ? 'rgba(255,140,0,0.15)'
-                  : hasMatch && searchTerm
-                  ? 'rgba(255,200,0,0.08)'
-                  : 'transparent',
-            }}
+            className={`flex items-baseline ${
+              isCurrentMatch && searchTerm
+                ? 'row-match-current'
+                : hasMatch && searchTerm
+                ? 'row-match'
+                : ''
+            }`}
           >
             {/* Line number */}
             <span className="line-gutter">{node.lineNumber}</span>
 
             {/* Content with indentation */}
-            <span style={{ paddingLeft: indent, display: 'flex', alignItems: 'baseline', flexShrink: 0 }}>
+            <span className={`indent-${Math.min(node.depth, 25)} flex items-baseline shrink-0`}>
               {/* Collapse arrow */}
               {node.isCollapsible ? (
                 <span
@@ -328,7 +316,7 @@ export function JsonTree({
                   {collapsed.has(node.key) ? '▶' : '▼'}
                 </span>
               ) : (
-                <span style={{ display: 'inline-block', width: 12 }} />
+                <span className="inline-block w-3" />
               )}
 
               {labelEl}
@@ -336,7 +324,7 @@ export function JsonTree({
 
               {/* Collapsed summary */}
               {node.isCollapsible && collapsed.has(node.key) && (
-                <span style={{ color: 'var(--color-text-muted)', marginLeft: 4 }}>
+                <span className="text-text-muted ml-1">
                   {node.type === 'open' && node.valuePreview.startsWith('[')
                     ? ` … ${node.childCount} item${node.childCount !== 1 ? 's' : ''}]`
                     : ` … ${node.childCount} key${node.childCount !== 1 ? 's' : ''}}`}

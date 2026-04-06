@@ -11,22 +11,16 @@ interface RequestItemProps {
   sandboxUrl: string;
 }
 
-const BADGE_COLORS: Record<string, string> = {
-  query: 'var(--color-badge-query)',
-  mutation: 'var(--color-badge-mutation)',
-  subscription: 'var(--color-badge-subscription)',
+const BADGE_BG: Record<string, string> = {
+  query: 'bg-badge-query',
+  mutation: 'bg-badge-mutation',
+  subscription: 'bg-badge-subscription',
 };
 
-const BADGE_LABELS: Record<string, string> = {
-  query: 'Q',
-  mutation: 'M',
-  subscription: 'S',
-};
-
-function statusColor(status: number): string {
-  if (status >= 400) return 'var(--color-error)';
-  if (status >= 200 && status < 300) return 'var(--color-success)';
-  return 'var(--color-text-muted)';
+function statusClass(status: number): string {
+  if (status >= 400) return 'text-error';
+  if (status >= 200 && status < 300) return 'text-success';
+  return 'text-text-muted';
 }
 
 export function RequestItem({
@@ -36,8 +30,9 @@ export function RequestItem({
   sandboxUrl,
 }: RequestItemProps) {
   const [sandboxError, setSandboxError] = useState(false);
-  const badge = BADGE_LABELS[request.operationType] ?? 'Q';
-  const badgeColor = BADGE_COLORS[request.operationType] ?? 'var(--color-badge-query)';
+  const badge = request.operationType === 'mutation' ? 'M'
+    : request.operationType === 'subscription' ? 'S' : 'Q';
+  const badgeBg = BADGE_BG[request.operationType] ?? 'bg-badge-query';
 
   const handleSandbox = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,125 +57,41 @@ export function RequestItem({
   return (
     <div
       onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '5px 8px',
-        cursor: 'pointer',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: isSelected
-          ? 'var(--color-selected)'
-          : 'transparent',
-        color: 'var(--color-text)',
-        userSelect: 'none',
-      }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          (e.currentTarget as HTMLDivElement).style.backgroundColor =
-            'var(--color-hover)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          (e.currentTarget as HTMLDivElement).style.backgroundColor =
-            'transparent';
-        }
-      }}
+      className={`flex items-center gap-1.5 px-2 py-[5px] cursor-pointer border-b border-border text-text select-none
+        ${isSelected ? 'bg-selected' : 'bg-transparent hover:bg-hover'}`}
     >
       {/* Type badge */}
       <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 18,
-          height: 18,
-          borderRadius: 3,
-          fontSize: 10,
-          fontWeight: 700,
-          color: '#fff',
-          backgroundColor: badgeColor,
-          flexShrink: 0,
-        }}
+        className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] text-[10px] font-bold text-white shrink-0 ${badgeBg}`}
       >
         {badge}
       </span>
 
       {/* Name + URL */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontWeight: 500,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+      <div className="flex-1 min-w-0">
+        <div className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
           {request.operationName}
         </div>
-        <div
-          style={{
-            fontSize: '10px',
-            color: 'var(--color-text-muted)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <div className="text-[10px] text-text-muted overflow-hidden text-ellipsis whitespace-nowrap">
           {request.url}
         </div>
       </div>
 
       {/* Status */}
-      <span
-        style={{
-          color: statusColor(request.status),
-          fontSize: '11px',
-          fontWeight: 500,
-          flexShrink: 0,
-        }}
-      >
+      <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
         {request.status}
       </span>
 
-      {/* Sandbox button + inline error */}
+      {/* Sandbox button or inline error */}
       {sandboxError ? (
-        <span style={{
-          color: 'var(--color-error)',
-          fontSize: '10px',
-          flexShrink: 0,
-          whiteSpace: 'nowrap',
-        }}>
+        <span className="text-error text-[10px] shrink-0 whitespace-nowrap">
           Invalid URL
         </span>
       ) : (
         <button
           onClick={handleSandbox}
           title="Open in Sandbox"
-          style={{
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-muted)',
-            borderRadius: '3px',
-            padding: '1px 5px',
-            fontSize: '10px',
-            cursor: 'pointer',
-            flexShrink: 0,
-            lineHeight: '16px',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color =
-              'var(--color-text)';
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              'var(--color-accent)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color =
-              'var(--color-text-muted)';
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              'var(--color-border)';
-          }}
+          className="bg-transparent border border-border text-text-muted rounded-[3px] px-[5px] py-[1px] text-[10px] cursor-pointer shrink-0 leading-4 hover:text-text hover:border-accent"
         >
           ↗
         </button>

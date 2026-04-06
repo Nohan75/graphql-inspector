@@ -77,15 +77,7 @@ export function App() {
       : null;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        backgroundColor: 'var(--color-bg)',
-        color: 'var(--color-text)',
-      }}
-    >
+    <div className="flex flex-col h-full bg-bg text-text">
       {/* Toolbar */}
       <Toolbar
         filterText={filterText}
@@ -97,18 +89,11 @@ export function App() {
       />
 
       {/* Main area: sidebar + resizer + detail */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar — width is dynamic (drag resizable), kept as inline style */}
         <div
-          style={{
-            width: sidebarWidth,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'var(--color-sidebar)',
-            borderRight: '1px solid var(--color-border)',
-            overflow: 'hidden',
-          }}
+          style={{ width: sidebarWidth }}
+          className="shrink-0 flex flex-col bg-sidebar border-r border-border overflow-hidden"
         >
           <RequestList
             requests={requests}
@@ -122,21 +107,7 @@ export function App() {
         {/* Resize handle */}
         <div
           onMouseDown={handleResizeMouseDown}
-          style={{
-            width: '4px',
-            cursor: 'col-resize',
-            backgroundColor: 'var(--color-border)',
-            flexShrink: 0,
-            transition: 'background-color 0.1s',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.backgroundColor =
-              'var(--color-accent)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLDivElement).style.backgroundColor =
-              'var(--color-border)';
-          }}
+          className="w-1 cursor-col-resize bg-border shrink-0 transition-colors duration-100 hover:bg-accent"
         />
 
         {/* Detail panel */}

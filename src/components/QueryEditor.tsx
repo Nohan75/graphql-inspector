@@ -93,14 +93,7 @@ export function QueryEditor({ query }: QueryEditorProps) {
   };
 
   return (
-    <div
-      style={{
-        fontFamily: "'Consolas', 'Courier New', monospace",
-        fontSize: '12px',
-        lineHeight: '20px',
-        color: 'var(--color-text)',
-      }}
-    >
+    <div className="code-font">
       {lineInfos.map((info) => {
         if (hiddenLines.has(info.lineNumber)) return null;
 
@@ -110,7 +103,7 @@ export function QueryEditor({ query }: QueryEditorProps) {
         return (
           <div
             key={info.lineNumber}
-            style={{ display: 'flex', alignItems: 'baseline' }}
+            className="flex items-baseline"
           >
             {/* Line number */}
             <span className="line-gutter">{info.lineNumber}</span>
@@ -125,11 +118,11 @@ export function QueryEditor({ query }: QueryEditorProps) {
                 {isCollapsed ? '▶' : '▼'}
               </span>
             ) : (
-              <span style={{ display: 'inline-block', width: 12 }} />
+              <span className="inline-block w-3" />
             )}
 
             {/* Code tokens */}
-            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            <span className="whitespace-pre-wrap break-all">
               {tokens.map((token, ti) => {
                 const cls = tokenClassMap[token.type];
                 return cls ? (
@@ -144,7 +137,7 @@ export function QueryEditor({ query }: QueryEditorProps) {
 
             {/* Collapse hint */}
             {isCollapsed && (
-              <span style={{ color: 'var(--color-text-muted)', marginLeft: 4 }}>
+              <span className="text-text-muted ml-1">
                 {' … }'}
               </span>
             )}

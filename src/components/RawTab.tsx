@@ -22,47 +22,27 @@ export function RawTab({ request }: RawTabProps) {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '5px 10px',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-toolbar)',
-        flexShrink: 0,
-      }}>
-        <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
+      <div className="flex items-center justify-between px-[10px] py-[5px] border-b border-border bg-toolbar shrink-0">
+        <span className="text-[11px] uppercase tracking-wider text-text-muted">
           Raw Response
         </span>
         <button
           onClick={() => copyToClipboard(request.responseRaw || '', setCopied)}
-          style={{
-            background: 'none',
-            border: `1px solid ${copied ? '#4caf50' : 'var(--color-border)'}`,
-            borderRadius: '3px',
-            color: copied ? '#4caf50' : 'var(--color-text-muted)',
-            fontSize: '10px',
-            padding: '2px 8px',
-            cursor: 'pointer',
-          }}
+          className={`bg-transparent rounded-[3px] text-[10px] px-2 py-[2px] cursor-pointer border
+            ${copied
+              ? 'border-success text-success'
+              : 'border-border text-text-muted hover:text-text hover:border-accent'
+            }`}
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
-        <pre style={{
-          margin: 0,
-          fontFamily: "'Consolas', 'Courier New', monospace",
-          fontSize: '12px',
-          color: 'var(--color-text)',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-          userSelect: 'text',
-        }}>
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        <pre className="m-0 code-font whitespace-pre-wrap break-all select-text">
           {request.responseRaw || '(empty)'}
         </pre>
       </div>

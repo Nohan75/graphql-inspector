@@ -29,33 +29,16 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => copyToClipboard(text, setCopied)}
-      style={{
-        background: 'none',
-        border: `1px solid ${copied ? '#4caf50' : 'var(--color-border)'}`,
-        borderRadius: '3px',
-        color: copied ? '#4caf50' : 'var(--color-text-muted)',
-        fontSize: '10px',
-        padding: '2px 8px',
-        cursor: 'pointer',
-      }}
+      className={`bg-transparent rounded-[3px] text-[10px] px-2 py-[2px] cursor-pointer border
+        ${copied
+          ? 'border-success text-success'
+          : 'border-border text-text-muted hover:text-text hover:border-accent'
+        }`}
     >
       {copied ? 'Copied!' : 'Copy'}
     </button>
   );
 }
-
-const sectionHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  color: 'var(--color-text-muted)',
-  fontSize: '11px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  padding: '5px 10px',
-  borderBottom: '1px solid var(--color-border)',
-  backgroundColor: 'var(--color-toolbar)',
-};
 
 export function QueryTab({ request }: QueryTabProps) {
   const [showVariables, setShowVariables] = useState(true);
@@ -84,44 +67,36 @@ export function QueryTab({ request }: QueryTabProps) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+    <div className="h-full flex flex-col overflow-y-auto">
 
       {/* ── Query ── */}
       <div>
-        <div style={sectionHeaderStyle}>
+        <div className="flex items-center justify-between text-text-muted text-[11px] uppercase tracking-wider px-[10px] py-[5px] border-b border-border bg-toolbar">
           <span>Query</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleOpenSandbox}
               disabled={!sandboxReady}
               title={sandboxReady ? 'Open in sandbox' : 'Configure a sandbox URL in Settings ⚙'}
-              style={{
-                background: 'none',
-                border: '1px solid var(--color-border)',
-                borderRadius: '3px',
-                color: 'var(--color-accent)',
-                fontSize: '10px',
-                padding: '2px 8px',
-                cursor: sandboxReady ? 'pointer' : 'not-allowed',
-                opacity: sandboxReady ? 1 : 0.4,
-              }}
+              className={`bg-transparent border border-border rounded-[3px] text-accent text-[10px] px-2 py-[2px]
+                ${sandboxReady ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
             >
               Open in Sandbox ↗
             </button>
             <CopyButton text={normalizedQuery} />
           </div>
         </div>
-        <div style={{ padding: '8px 0' }}>
+        <div className="py-2">
           <QueryEditor query={request.query} />
         </div>
       </div>
 
       {/* ── Variables ── */}
       {request.variables !== null && (
-        <div style={{ borderTop: '1px solid var(--color-border)', marginTop: '8px' }}>
-          <div style={{ ...sectionHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+        <div className="border-t border-border mt-2">
+          <div className="flex items-center justify-between text-text-muted text-[11px] uppercase tracking-wider px-[10px] py-[5px] border-b border-border bg-toolbar cursor-pointer select-none">
             <span
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              className="flex items-center gap-1.5"
               onClick={() => setShowVariables((v) => !v)}
             >
               {showVariables ? '▼' : '▶'}
@@ -130,7 +105,7 @@ export function QueryTab({ request }: QueryTabProps) {
             <CopyButton text={JSON.stringify(request.variables, null, 2)} />
           </div>
           {showVariables && (
-            <div style={{ padding: '8px 0' }}>
+            <div className="py-2">
               <JsonTree data={request.variables} />
             </div>
           )}

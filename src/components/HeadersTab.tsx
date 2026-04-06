@@ -13,56 +13,20 @@ interface HeaderTableProps {
 function HeaderTable({ title, headers }: HeaderTableProps) {
   return (
     <div className="mb-4">
-      <div
-        style={{
-          color: 'var(--color-text-muted)',
-          fontSize: '11px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          padding: '6px 12px',
-          borderBottom: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-toolbar)',
-        }}
-      >
+      <div className="text-text-muted text-[11px] uppercase tracking-wider px-3 py-1.5 border-b border-border bg-toolbar">
         {title}
       </div>
       {headers.length === 0 ? (
-        <div style={{ padding: '8px 12px', color: 'var(--color-text-muted)' }}>
-          No headers
-        </div>
+        <div className="px-3 py-2 text-text-muted">No headers</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="w-full border-collapse">
           <tbody>
             {headers.map((h, i) => (
-              <tr
-                key={i}
-                style={{
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <td
-                  style={{
-                    padding: '4px 12px',
-                    color: 'var(--color-syn-field)',
-                    fontFamily: "'Consolas', monospace",
-                    fontSize: '12px',
-                    width: '40%',
-                    verticalAlign: 'top',
-                    userSelect: 'text',
-                  }}
-                >
+              <tr key={i} className="border-b border-border">
+                <td className="px-3 py-1 text-syn-field code-font w-[40%] align-top select-text">
                   {h.name}
                 </td>
-                <td
-                  style={{
-                    padding: '4px 12px',
-                    color: 'var(--color-text)',
-                    fontFamily: "'Consolas', monospace",
-                    fontSize: '12px',
-                    wordBreak: 'break-all',
-                    userSelect: 'text',
-                  }}
-                >
+                <td className="px-3 py-1 text-text code-font break-all select-text">
                   {h.value}
                 </td>
               </tr>
@@ -76,8 +40,8 @@ function HeaderTable({ title, headers }: HeaderTableProps) {
 
 export function HeadersTab({ request }: HeadersTabProps) {
   return (
-    <div style={{ overflowY: 'auto', height: '100%' }}>
-      <HeaderTable title="Request Headers" headers={request.requestHeaders} />
+    <div className="overflow-y-auto h-full">
+      <HeaderTable title="Request Headers"  headers={request.requestHeaders} />
       <HeaderTable title="Response Headers" headers={request.responseHeaders} />
     </div>
   );
