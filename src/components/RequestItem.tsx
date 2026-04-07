@@ -77,10 +77,16 @@ export function RequestItem({
         </div>
       </div>
 
-      {/* Status */}
-      <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
-        {request.status}
-      </span>
+      {/* Status / pending indicator */}
+      {request.pending ? (
+        <span className="text-[11px] font-medium shrink-0 text-text-muted animate-pulse">
+          ●●●
+        </span>
+      ) : (
+        <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
+          {request.status}
+        </span>
+      )}
 
       {/* Sandbox button or inline error */}
       {sandboxError ? (

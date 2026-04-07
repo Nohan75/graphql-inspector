@@ -55,12 +55,17 @@ export function QueryTab({ request }: QueryTabProps) {
 
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
-  const isApolloSandbox = (url: string) =>
-    url.includes('apollographql') || url.includes('apollo.dev');
+  const useApolloFormat = ((): boolean => {
+    const fmt = settings.sandboxFormat ?? 'auto';
+    if (fmt === 'apollo') return true;
+    if (fmt === 'graphiql') return false;
+    // auto: detect by URL
+    return settings.sandboxUrl.includes('apollographql') || settings.sandboxUrl.includes('apollo.dev');
+  })();
 
   const handleOpenSandbox = () => {
     if (!sandboxReady) return;
-    const url = isApolloSandbox(settings.sandboxUrl)
+    const url = useApolloFormat
       ? buildApolloSandboxUrl(settings.sandboxUrl, normalizedQuery, request.variables, request.url)
       : buildGraphiQLUrl(settings.sandboxUrl, normalizedQuery, request.variables);
     openInSandbox(url);
