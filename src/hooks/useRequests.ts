@@ -14,7 +14,12 @@ const PENDING_MATCH_WINDOW = 30_000; // 30 s — max time between intercept and 
 let requestIdCounter = 0;
 
 /** Pending entry tracked for later correlation with onRequestFinished */
-interface PendingMeta { id: number; timestamp: number }
+interface PendingMeta {
+  id: number;
+  timestamp: number;
+  /** Used to match the right pending entry when multiple requests share the same URL */
+  operationName: string;
+}
 
 export function useRequests(preserveLog: boolean) {
   const [requests, setRequests] = useState<GQLRequest[]>([]);
@@ -70,7 +75,7 @@ export function useRequests(preserveLog: boolean) {
       const list = pendingMapRef.current.get(payload.url) ?? [];
       pendingMapRef.current.set(payload.url, [
         ...list,
-        { id, timestamp: payload.timestamp },
+        { id, timestamp: payload.timestamp, operationName: entry.operationName },
       ]);
 
       setRequests((prev) => {
@@ -84,23 +89,39 @@ export function useRequests(preserveLog: boolean) {
   );
 
   useEffect(() => {
-    // ── Listen directly for pending-request messages from the content script ──
-    // chrome.runtime.onMessage in a DevTools page receives messages sent by
-    // content scripts via chrome.runtime.sendMessage in the same extension.
-    // We filter by tabId to only handle messages from the inspected tab.
-    const inspectedTabId = chrome.devtools.inspectedWindow.tabId;
+    // ── Connect to background service worker via a named port ────────────
+    // The background uses chrome.webRequest.onBeforeRequest to detect
+    // request starts and forwards them here via this port.
+    // We reconnect automatically if the service worker restarts.
+    const tabId = chrome.devtools.inspectedWindow.tabId;
+    let port: chrome.runtime.Port | null = null;
 
-    function onRuntimeMessage(
-      msg: { type: string; payload: unknown },
-      sender: chrome.runtime.MessageSender
-    ) {
-      if (msg.type !== 'gql_pending') return;
-      if (sender.tab?.id !== inspectedTabId) return;
-      handlePendingMessage(
-        msg.payload as Parameters<typeof handlePendingMessage>[0]
-      );
+    function connectPort() {
+      try {
+        port = chrome.runtime.connect({ name: 'devtools-panel' });
+        port.postMessage({ type: 'init', tabId });
+
+        port.onMessage.addListener(
+          (msg: { type: string; payload: unknown }) => {
+            if (msg.type === 'gql_pending') {
+              handlePendingMessage(
+                msg.payload as Parameters<typeof handlePendingMessage>[0]
+              );
+            }
+          }
+        );
+
+        // Service worker can restart (e.g. after Chrome update); reconnect.
+        port.onDisconnect.addListener(() => {
+          port = null;
+          setTimeout(connectPort, 200);
+        });
+      } catch {
+        // Extension context invalidated – stop retrying
+      }
     }
-    chrome.runtime.onMessage.addListener(onRuntimeMessage);
+
+    connectPort();
 
     // ── onRequestFinished — update pending entry or create a new one ────
     function handleRequestFinished(
@@ -139,16 +160,29 @@ export function useRequests(preserveLog: boolean) {
         const status = request.response.status;
 
         // ── Try to match an existing pending entry ──
+        // Primary key: operationName — reliable even when responses arrive
+        // out of order (multiple requests to the same GraphQL endpoint).
+        // Fallback: FIFO within the same window when names clash.
+        const resolvedName =
+          operationName ?? parseOperationName(query) ?? 'Anonymous';
         const pendingList = pendingMapRef.current.get(url) ?? [];
-        let bestIdx  = -1;
-        let bestDiff = Infinity;
 
-        for (let i = 0; i < pendingList.length; i++) {
-          const diff = finishTime - pendingList[i].timestamp;
-          if (diff >= 0 && diff < PENDING_MATCH_WINDOW && diff < bestDiff) {
-            bestDiff = diff;
-            bestIdx  = i;
-          }
+        // 1st pass — match by operationName (exact, within time window)
+        let bestIdx = pendingList.findIndex((p) => {
+          const diff = finishTime - p.timestamp;
+          return (
+            diff >= 0 &&
+            diff < PENDING_MATCH_WINDOW &&
+            p.operationName === resolvedName
+          );
+        });
+
+        // 2nd pass — FIFO fallback (same name used multiple times simultaneously)
+        if (bestIdx < 0) {
+          bestIdx = pendingList.findIndex((p) => {
+            const diff = finishTime - p.timestamp;
+            return diff >= 0 && diff < PENDING_MATCH_WINDOW;
+          });
         }
 
         if (bestIdx >= 0) {
@@ -219,7 +253,7 @@ export function useRequests(preserveLog: boolean) {
     chrome.devtools.network.onNavigated.addListener(handleNavigated);
 
     return () => {
-      chrome.runtime.onMessage.removeListener(onRuntimeMessage);
+      port?.disconnect();
       chrome.devtools.network.onRequestFinished.removeListener(
         handleRequestFinished
       );
