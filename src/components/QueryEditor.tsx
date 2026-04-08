@@ -307,16 +307,18 @@ export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
 
             {/* Per-line sandbox button */}
             {isField && (
-              <span
-                className="ml-1.5 opacity-0 group-hover:opacity-100 cursor-pointer text-accent text-[10px] leading-none select-none"
+              <button
+                type="button"
+                className="ml-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 cursor-pointer text-accent text-[10px] leading-none bg-transparent border-none p-0"
                 onClick={() => {
                   const sub = extractFieldSubquery(normalizedQuery, info.lineNumber);
                   if (sub) onOpenLine(sub);
                 }}
+                aria-label="Open this field in sandbox"
                 title="Open this field in sandbox"
               >
                 ↗
-              </span>
+              </button>
             )}
           </div>
         );
