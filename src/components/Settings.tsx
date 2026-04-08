@@ -73,11 +73,12 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
           className="w-full bg-bg text-text border border-border rounded-[3px] px-[10px] py-1.5 text-xs outline-none font-mono cursor-pointer focus:border-accent"
         >
           <option value="auto">Auto-detect (apollographql → Apollo, sinon GraphiQL)</option>
-          <option value="apollo">Apollo Sandbox — ?document= + &endpoint=</option>
+          <option value="apollo">Apollo Studio — ?document= + &endpoint=</option>
+          <option value="apollo-no-endpoint">Apollo Playground — ?document= (sans endpoint)</option>
           <option value="graphiql">GraphiQL — ?query= + &variables=</option>
         </select>
         <div className="mt-1 text-[11px] text-text-muted">
-          Choisis <strong className="text-text">Apollo Sandbox</strong> si ton sandbox interne supporte <code className="bg-white/10 px-1 rounded font-mono">?document=</code>
+          Utilise <strong className="text-text">Apollo Playground</strong> si ton sandbox est hébergé sur ton propre endpoint GraphQL
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

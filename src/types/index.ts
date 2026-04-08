@@ -19,7 +19,7 @@ export interface GQLRequest {
 
 export type TabId = 'headers' | 'request' | 'response' | 'raw';
 
-export type SandboxFormat = 'auto' | 'apollo' | 'graphiql';
+export type SandboxFormat = 'auto' | 'apollo' | 'apollo-no-endpoint' | 'graphiql';
 
 export interface Settings {
   sandboxUrl: string;
