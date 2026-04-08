@@ -26,8 +26,8 @@ export function buildApolloSandboxUrl(
 ): string {
   return (
     `${sandboxBase}` +
-    `?endpoint=${encodeURIComponent(endpoint)}` +
-    `&document=${encodeURIComponent(query)}` +
+    `?document=${encodeURIComponent(query)}` +
+    `&endpoint=${encodeURIComponent(endpoint)}` +
     (variables
       ? `&variables=${encodeURIComponent(JSON.stringify(variables, null, 2))}`
       : '')
