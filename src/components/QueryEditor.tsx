@@ -5,6 +5,7 @@ import {
   type OperationDefinitionNode,
   type SelectionSetNode,
   type FieldNode,
+  type ValueNode,
 } from 'graphql';
 import { tokenizeLine, tokenClassMap } from '../utils/highlight';
 import { stripCommonIndent } from '../utils/graphql';
@@ -71,8 +72,33 @@ function extractFieldSubquery(
     };
   }
 
+  // Collect variable names referenced in the extracted subtree so we only
+  // keep the variableDefinitions that are actually used. Spreading ...operation
+  // would carry over all original variables, causing GraphQL validation errors
+  // like "Variable '$x' is never used" for variables not in this sub-query.
+  const usedVars = new Set<string>();
+  function collectVars(field: FieldNode) {
+    function visitValue(v: ValueNode) {
+      if (v.kind === 'Variable') {
+        usedVars.add(v.name.value);
+      } else if (v.kind === 'ListValue') {
+        v.values.forEach(visitValue);
+      } else if (v.kind === 'ObjectValue') {
+        v.fields.forEach((f) => visitValue(f.value));
+      }
+    }
+    field.arguments?.forEach((arg) => visitValue(arg.value));
+    field.selectionSet?.selections.forEach((sel) => {
+      if (sel.kind === 'Field') collectVars(sel);
+    });
+  }
+  collectVars(inner);
+
   const newOp: OperationDefinitionNode = {
     ...operation,
+    variableDefinitions: (operation.variableDefinitions ?? []).filter((vd) =>
+      usedVars.has(vd.variable.name.value)
+    ),
     selectionSet: { kind: 'SelectionSet', selections: [inner] },
   };
 
