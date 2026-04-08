@@ -37,9 +37,20 @@ function extractFieldSubquery(
     return null;
   }
 
-  const operation = ast.definitions.find(
+  const operations = ast.definitions.filter(
     (d): d is OperationDefinitionNode => d.kind === 'OperationDefinition'
   );
+  const operation =
+    operations.find((op) => {
+      const startLine = op.loc?.startToken.line;
+      const endLine = op.loc?.endToken.line;
+      return (
+        startLine !== undefined &&
+        endLine !== undefined &&
+        startLine <= lineNumber &&
+        lineNumber <= endLine
+      );
+    }) ?? operations[0];
   if (!operation) return null;
 
   // Depth-first search: return the path of FieldNodes leading to the target line
