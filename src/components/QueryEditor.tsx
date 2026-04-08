@@ -198,9 +198,11 @@ export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
   const rawLines = useMemo(() => normalizedQuery.split('\n'), [normalizedQuery]);
   const lineInfos = useMemo(() => buildLineInfos(rawLines), [rawLines]);
 
-  // Collect line numbers that correspond to a GraphQL field
+  // Collect line numbers that correspond to a GraphQL field.
+  // Skip the parse work entirely when onOpenLine is not provided (sandbox not configured).
   const fieldLineNumbers = useMemo(() => {
     const lineNums = new Set<number>();
+    if (!onOpenLine) return lineNums;
     let ast;
     try {
       ast = parse(normalizedQuery);
