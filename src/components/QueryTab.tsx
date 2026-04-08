@@ -55,19 +55,26 @@ export function QueryTab({ request }: QueryTabProps) {
 
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
-  const handleOpenSandbox = () => {
-    if (!sandboxReady) return;
+  function buildSandboxUrl(query: string): string {
     const fmt = settings.sandboxFormat ?? 'auto';
     const isAutoApollo = settings.sandboxUrl.includes('apollographql') || settings.sandboxUrl.includes('apollo.dev');
-    let url: string;
     if (fmt === 'apollo' || (fmt === 'auto' && isAutoApollo)) {
-      url = buildApolloSandboxUrl(settings.sandboxUrl, normalizedQuery, request.variables, request.url);
+      return buildApolloSandboxUrl(settings.sandboxUrl, query, request.variables, request.url);
     } else if (fmt === 'apollo-no-endpoint') {
-      url = buildApolloPlaygroundUrl(settings.sandboxUrl, normalizedQuery, request.variables);
+      return buildApolloPlaygroundUrl(settings.sandboxUrl, query, request.variables);
     } else {
-      url = buildGraphiQLUrl(settings.sandboxUrl, normalizedQuery, request.variables);
+      return buildGraphiQLUrl(settings.sandboxUrl, query, request.variables);
     }
-    openInSandbox(url);
+  }
+
+  const handleOpenSandbox = () => {
+    if (!sandboxReady) return;
+    openInSandbox(buildSandboxUrl(normalizedQuery));
+  };
+
+  const handleOpenLine = (subquery: string) => {
+    if (!sandboxReady) return;
+    openInSandbox(buildSandboxUrl(subquery));
   };
 
   return (
@@ -91,7 +98,7 @@ export function QueryTab({ request }: QueryTabProps) {
           </div>
         </div>
         <div className="py-2">
-          <QueryEditor query={request.query} />
+          <QueryEditor query={request.query} onOpenLine={sandboxReady ? handleOpenLine : undefined} />
         </div>
       </div>
 

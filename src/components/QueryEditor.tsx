@@ -1,10 +1,82 @@
 import React, { useState, useMemo } from 'react';
-import { parse, print } from 'graphql';
+import {
+  parse,
+  print,
+  type OperationDefinitionNode,
+  type SelectionSetNode,
+  type FieldNode,
+} from 'graphql';
 import { tokenizeLine, tokenClassMap } from '../utils/highlight';
 import { stripCommonIndent } from '../utils/graphql';
 
 interface QueryEditorProps {
   query: string;
+  /** Called with a minimal sub-query string when the user clicks a line's ↗ button */
+  onOpenLine?: (subquery: string) => void;
+}
+
+/**
+ * Given the normalized query and a 1-based line number, returns a minimal
+ * query that contains only the field on that line, all its children (if any),
+ * and all its ancestor fields up to the operation root.
+ *
+ * Example — clicking "lat" in:
+ *   query Q { assets { location { lat lng } } }
+ * returns:
+ *   query Q { assets { location { lat } } }
+ */
+function extractFieldSubquery(
+  normalizedQuery: string,
+  lineNumber: number
+): string | null {
+  let ast;
+  try {
+    ast = parse(normalizedQuery);
+  } catch {
+    return null;
+  }
+
+  const operation = ast.definitions.find(
+    (d): d is OperationDefinitionNode => d.kind === 'OperationDefinition'
+  );
+  if (!operation) return null;
+
+  // Depth-first search: return the path of FieldNodes leading to the target line
+  function findPath(
+    selectionSet: SelectionSetNode,
+    path: FieldNode[]
+  ): FieldNode[] | null {
+    for (const sel of selectionSet.selections) {
+      if (sel.kind !== 'Field') continue;
+      const next = [...path, sel];
+      if (sel.loc?.startToken.line === lineNumber) return next;
+      if (sel.selectionSet) {
+        const found = findPath(sel.selectionSet, next);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  const path = findPath(operation.selectionSet, []);
+  if (!path || path.length === 0) return null;
+
+  // Rebuild from leaf → root.
+  // The leaf keeps its full selection set; each parent wraps only the child below it.
+  let inner: FieldNode = path[path.length - 1];
+  for (let i = path.length - 2; i >= 0; i--) {
+    inner = {
+      ...path[i],
+      selectionSet: { kind: 'SelectionSet', selections: [inner] },
+    };
+  }
+
+  const newOp: OperationDefinitionNode = {
+    ...operation,
+    selectionSet: { kind: 'SelectionSet', selections: [inner] },
+  };
+
+  return print(newOp);
 }
 
 interface LineInfo {
@@ -55,7 +127,7 @@ function buildLineInfos(lines: string[]): LineInfo[] {
   return infos;
 }
 
-export function QueryEditor({ query }: QueryEditorProps) {
+export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
   const [collapsedLines, setCollapsedLines] = useState<Set<number>>(new Set());
 
   const normalizedQuery = useMemo(() => {
@@ -68,6 +140,28 @@ export function QueryEditor({ query }: QueryEditorProps) {
   }, [query]);
   const rawLines = useMemo(() => normalizedQuery.split('\n'), [normalizedQuery]);
   const lineInfos = useMemo(() => buildLineInfos(rawLines), [rawLines]);
+
+  // Collect line numbers that correspond to a GraphQL field
+  const fieldLineNumbers = useMemo(() => {
+    const lineNums = new Set<number>();
+    let ast;
+    try {
+      ast = parse(normalizedQuery);
+    } catch {
+      return lineNums;
+    }
+    function collectLines(selectionSet: SelectionSetNode) {
+      for (const sel of selectionSet.selections) {
+        if (sel.kind !== 'Field') continue;
+        if (sel.loc?.startToken.line) lineNums.add(sel.loc.startToken.line);
+        if (sel.selectionSet) collectLines(sel.selectionSet);
+      }
+    }
+    for (const def of ast.definitions) {
+      if (def.kind === 'OperationDefinition') collectLines(def.selectionSet);
+    }
+    return lineNums;
+  }, [normalizedQuery]);
 
   // Determine hidden lines
   const hiddenLines = useMemo(() => {
@@ -100,10 +194,12 @@ export function QueryEditor({ query }: QueryEditorProps) {
         const isCollapsed = collapsedLines.has(info.lineNumber);
         const tokens = tokenizeLine(info.text);
 
+        const isField = onOpenLine && fieldLineNumbers.has(info.lineNumber);
+
         return (
           <div
             key={info.lineNumber}
-            className="flex items-baseline"
+            className="flex items-baseline group"
           >
             {/* Line number */}
             <span className="line-gutter">{info.lineNumber}</span>
@@ -139,6 +235,20 @@ export function QueryEditor({ query }: QueryEditorProps) {
             {isCollapsed && (
               <span className="text-text-muted ml-1">
                 {' … }'}
+              </span>
+            )}
+
+            {/* Per-line sandbox button */}
+            {isField && (
+              <span
+                className="ml-1.5 opacity-0 group-hover:opacity-100 cursor-pointer text-accent text-[10px] leading-none select-none"
+                onClick={() => {
+                  const sub = extractFieldSubquery(normalizedQuery, info.lineNumber);
+                  if (sub) onOpenLine(sub);
+                }}
+                title="Open this field in sandbox"
+              >
+                ↗
               </span>
             )}
           </div>
