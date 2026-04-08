@@ -14,8 +14,28 @@ export function validateSandboxUrl(url: string): boolean {
 }
 
 /**
+ * Build an Apollo Playground URL without the endpoint parameter.
+ * For self-hosted playgrounds that already know their endpoint
+ * (the sandbox URL IS the GraphQL endpoint) — adding ?endpoint=
+ * would override it and cause errors.
+ */
+export function buildApolloPlaygroundUrl(
+  sandboxBase: string,
+  query: string,
+  variables: Record<string, unknown> | null
+): string {
+  return (
+    `${sandboxBase}` +
+    `?document=${encodeURIComponent(query)}` +
+    (variables
+      ? `&variables=${encodeURIComponent(JSON.stringify(variables, null, 2))}`
+      : '')
+  );
+}
+
+/**
  * Build an Apollo Sandbox URL for the given query.
- * Uses the documented format: ?endpoint=&document=&variables=
+ * Uses the documented format: ?document=&endpoint=&variables=
  * Ref: https://www.apollographql.com/docs/graphos/explorer/sandbox
  */
 export function buildApolloSandboxUrl(
@@ -26,8 +46,8 @@ export function buildApolloSandboxUrl(
 ): string {
   return (
     `${sandboxBase}` +
-    `?endpoint=${encodeURIComponent(endpoint)}` +
-    `&document=${encodeURIComponent(query)}` +
+    `?document=${encodeURIComponent(query)}` +
+    `&endpoint=${encodeURIComponent(endpoint)}` +
     (variables
       ? `&variables=${encodeURIComponent(JSON.stringify(variables, null, 2))}`
       : '')

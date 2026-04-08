@@ -4,7 +4,7 @@ import { QueryEditor } from './QueryEditor';
 import { JsonTree } from './JsonTree';
 import { useSettings } from '../hooks/useSettings';
 import { stripCommonIndent } from '../utils/graphql';
-import { validateSandboxUrl, buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
+import { validateSandboxUrl, buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
 import { parse, print } from 'graphql';
 
 interface QueryTabProps {
@@ -55,14 +55,18 @@ export function QueryTab({ request }: QueryTabProps) {
 
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
-  const isApolloSandbox = (url: string) =>
-    url.includes('apollographql') || url.includes('apollo.dev');
-
   const handleOpenSandbox = () => {
     if (!sandboxReady) return;
-    const url = isApolloSandbox(settings.sandboxUrl)
-      ? buildApolloSandboxUrl(settings.sandboxUrl, normalizedQuery, request.variables, request.url)
-      : buildGraphiQLUrl(settings.sandboxUrl, normalizedQuery, request.variables);
+    const fmt = settings.sandboxFormat ?? 'auto';
+    const isAutoApollo = settings.sandboxUrl.includes('apollographql') || settings.sandboxUrl.includes('apollo.dev');
+    let url: string;
+    if (fmt === 'apollo' || (fmt === 'auto' && isAutoApollo)) {
+      url = buildApolloSandboxUrl(settings.sandboxUrl, normalizedQuery, request.variables, request.url);
+    } else if (fmt === 'apollo-no-endpoint') {
+      url = buildApolloPlaygroundUrl(settings.sandboxUrl, normalizedQuery, request.variables);
+    } else {
+      url = buildGraphiQLUrl(settings.sandboxUrl, normalizedQuery, request.variables);
+    }
     openInSandbox(url);
   };
 

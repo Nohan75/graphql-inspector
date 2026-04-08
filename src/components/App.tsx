@@ -104,6 +104,7 @@ export function App() {
             selectedId={selectedId}
             filterText={filterText}
             sandboxUrl={settings.sandboxUrl}
+            sandboxFormat={settings.sandboxFormat}
             onSelect={setSelectedId}
           />
         </div>

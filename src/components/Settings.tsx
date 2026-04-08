@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Settings } from '../types';
+import type { Settings, SandboxFormat } from '../types';
 import { validateSandboxUrl } from '../utils/sandbox';
 
 interface SettingsProps {
@@ -10,6 +10,7 @@ interface SettingsProps {
 
 export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
   const [sandboxUrl, setSandboxUrl] = useState(settings.sandboxUrl);
+  const [sandboxFormat, setSandboxFormat] = useState<SandboxFormat>(settings.sandboxFormat ?? 'auto');
   const [error, setError] = useState('');
 
   const handleSave = () => {
@@ -19,7 +20,7 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
       return;
     }
     setError('');
-    onSave({ sandboxUrl: trimmed });
+    onSave({ sandboxUrl: trimmed, sandboxFormat });
     onClose();
   };
 
@@ -61,6 +62,23 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
 
         <div className="mt-2 text-[11px] text-text-muted">
           Used for "Open in Sandbox" button. Must be http:// or https://.
+        </div>
+
+        <label className="block mt-3 mb-1.5 text-xs text-text-muted">
+          URL Format
+        </label>
+        <select
+          value={sandboxFormat}
+          onChange={(e) => setSandboxFormat(e.target.value as SandboxFormat)}
+          className="w-full bg-bg text-text border border-border rounded-[3px] px-[10px] py-1.5 text-xs outline-none font-mono cursor-pointer focus:border-accent"
+        >
+          <option value="auto">Auto-detect (apollographql → Apollo, sinon GraphiQL)</option>
+          <option value="apollo">Apollo Studio — ?document= + &endpoint=</option>
+          <option value="apollo-no-endpoint">Apollo Playground — ?document= (sans endpoint)</option>
+          <option value="graphiql">GraphiQL — ?query= + &variables=</option>
+        </select>
+        <div className="mt-1 text-[11px] text-text-muted">
+          Utilise <strong className="text-text">Apollo Playground</strong> si ton sandbox est hébergé sur ton propre endpoint GraphQL
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

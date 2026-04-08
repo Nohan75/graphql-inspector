@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import type { GQLRequest } from '../types';
+import type { GQLRequest, SandboxFormat } from '../types';
 import { RequestItem } from './RequestItem';
 
 interface RequestListProps {
@@ -7,6 +7,7 @@ interface RequestListProps {
   selectedId: number | null;
   filterText: string;
   sandboxUrl: string;
+  sandboxFormat: SandboxFormat;
   onSelect: (id: number) => void;
 }
 
@@ -15,6 +16,7 @@ export function RequestList({
   selectedId,
   filterText,
   sandboxUrl,
+  sandboxFormat,
   onSelect,
 }: RequestListProps) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -63,6 +65,7 @@ export function RequestList({
           isSelected={req.id === selectedId}
           onClick={() => onSelect(req.id)}
           sandboxUrl={sandboxUrl}
+          sandboxFormat={sandboxFormat}
         />
       ))}
     </div>

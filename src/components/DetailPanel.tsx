@@ -5,6 +5,14 @@ import { QueryTab } from './QueryTab';
 import { ResponseTab } from './ResponseTab';
 import { RawTab } from './RawTab';
 
+function PendingPlaceholder() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-text-muted text-xs animate-pulse p-8">
+      Waiting for response…
+    </div>
+  );
+}
+
 interface DetailPanelProps {
   request: GQLRequest | null;
 }
@@ -50,8 +58,16 @@ export function DetailPanel({ request }: DetailPanelProps) {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'headers'  && <HeadersTab request={request} />}
         {activeTab === 'request'  && <QueryTab request={request} />}
-        {activeTab === 'response' && <ResponseTab request={request} />}
-        {activeTab === 'raw'      && <RawTab request={request} />}
+        {activeTab === 'response' && (
+          request.pending
+            ? <PendingPlaceholder />
+            : <ResponseTab request={request} />
+        )}
+        {activeTab === 'raw' && (
+          request.pending
+            ? <PendingPlaceholder />
+            : <RawTab request={request} />
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ const STORAGE_KEY = 'gql_inspector_settings';
 
 const defaultSettings: Settings = {
   sandboxUrl: 'https://studio.apollographql.com/sandbox/explorer',
+  sandboxFormat: 'auto',
 };
 
 export function useSettings() {

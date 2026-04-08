@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { GQLRequest } from '../types';
-import { buildApolloSandboxUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
+import { buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
+import type { SandboxFormat } from '../types';
 import { parse, print } from 'graphql';
 import { stripCommonIndent } from '../utils/graphql';
 
@@ -9,6 +10,7 @@ interface RequestItemProps {
   isSelected: boolean;
   onClick: () => void;
   sandboxUrl: string;
+  sandboxFormat: SandboxFormat;
 }
 
 const BADGE_BG: Record<string, string> = {
@@ -28,6 +30,7 @@ export function RequestItem({
   isSelected,
   onClick,
   sandboxUrl,
+  sandboxFormat,
 }: RequestItemProps) {
   const [sandboxError, setSandboxError] = useState(false);
   const badge = request.operationType === 'mutation' ? 'M'
@@ -47,10 +50,15 @@ export function RequestItem({
     } catch {
       normalizedQuery = stripCommonIndent(request.query.trim());
     }
-    const isApollo = sandboxUrl.includes('apollographql') || sandboxUrl.includes('apollo.dev');
-    const url = isApollo
-      ? buildApolloSandboxUrl(sandboxUrl, normalizedQuery, request.variables, request.url)
-      : buildGraphiQLUrl(sandboxUrl, normalizedQuery, request.variables);
+    const isAutoApollo = sandboxUrl.includes('apollographql') || sandboxUrl.includes('apollo.dev');
+    let url: string;
+    if (sandboxFormat === 'apollo' || (sandboxFormat === 'auto' && isAutoApollo)) {
+      url = buildApolloSandboxUrl(sandboxUrl, normalizedQuery, request.variables, request.url);
+    } else if (sandboxFormat === 'apollo-no-endpoint') {
+      url = buildApolloPlaygroundUrl(sandboxUrl, normalizedQuery, request.variables);
+    } else {
+      url = buildGraphiQLUrl(sandboxUrl, normalizedQuery, request.variables);
+    }
     openInSandbox(url);
   };
 
@@ -77,10 +85,16 @@ export function RequestItem({
         </div>
       </div>
 
-      {/* Status */}
-      <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
-        {request.status}
-      </span>
+      {/* Status / pending indicator */}
+      {request.pending ? (
+        <span className="text-[11px] font-medium shrink-0 text-text-muted animate-pulse">
+          ●●●
+        </span>
+      ) : (
+        <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
+          {request.status}
+        </span>
+      )}
 
       {/* Sandbox button or inline error */}
       {sandboxError ? (

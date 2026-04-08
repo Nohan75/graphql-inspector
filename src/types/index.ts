@@ -13,10 +13,15 @@ export interface GQLRequest {
   status: number;
   url: string;
   timestamp: number;
+  /** True while the network response has not yet been received */
+  pending?: boolean;
 }
 
 export type TabId = 'headers' | 'request' | 'response' | 'raw';
 
+export type SandboxFormat = 'auto' | 'apollo' | 'apollo-no-endpoint' | 'graphiql';
+
 export interface Settings {
   sandboxUrl: string;
+  sandboxFormat: SandboxFormat;
 }
