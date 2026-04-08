@@ -8,7 +8,9 @@ interface RequestListProps {
   filterText: string;
   sandboxUrl: string;
   sandboxFormat: SandboxFormat;
+  compareIds: number[];
   onSelect: (id: number) => void;
+  onCompareToggle: (id: number) => void;
 }
 
 export function RequestList({
@@ -17,7 +19,9 @@ export function RequestList({
   filterText,
   sandboxUrl,
   sandboxFormat,
+  compareIds,
   onSelect,
+  onCompareToggle,
 }: RequestListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(requests.length);
@@ -58,16 +62,24 @@ export function RequestList({
 
   return (
     <div ref={listRef} className="flex-1 overflow-y-auto">
-      {filtered.map((req) => (
-        <RequestItem
-          key={req.id}
-          request={req}
-          isSelected={req.id === selectedId}
-          onClick={() => onSelect(req.id)}
-          sandboxUrl={sandboxUrl}
-          sandboxFormat={sandboxFormat}
-        />
-      ))}
+      {filtered.map((req) => {
+        const comparePosition =
+          req.id === compareIds[0] ? 'A' as const :
+          req.id === compareIds[1] ? 'B' as const :
+          undefined;
+        return (
+          <RequestItem
+            key={req.id}
+            request={req}
+            isSelected={req.id === selectedId}
+            onClick={() => onSelect(req.id)}
+            sandboxUrl={sandboxUrl}
+            sandboxFormat={sandboxFormat}
+            comparePosition={comparePosition}
+            onCompareToggle={(e) => { e.stopPropagation(); onCompareToggle(req.id); }}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -11,6 +11,9 @@ interface RequestItemProps {
   onClick: () => void;
   sandboxUrl: string;
   sandboxFormat: SandboxFormat;
+  /** 'A' = first in compare pair (red), 'B' = second (green), undefined = not selected */
+  comparePosition?: 'A' | 'B';
+  onCompareToggle: (e: React.MouseEvent) => void;
 }
 
 const BADGE_BG: Record<string, string> = {
@@ -31,6 +34,8 @@ export function RequestItem({
   onClick,
   sandboxUrl,
   sandboxFormat,
+  comparePosition,
+  onCompareToggle,
 }: RequestItemProps) {
   const [sandboxError, setSandboxError] = useState(false);
   const badge = request.operationType === 'mutation' ? 'M'
@@ -95,6 +100,21 @@ export function RequestItem({
           {request.status}
         </span>
       )}
+
+      {/* Compare toggle button */}
+      <button
+        onClick={onCompareToggle}
+        title={comparePosition ? `In compare (${comparePosition}) — click to remove` : 'Add to compare'}
+        className={`bg-transparent border rounded-[3px] px-[5px] py-[1px] text-[10px] cursor-pointer shrink-0 leading-4 font-bold
+          ${comparePosition === 'A'
+            ? 'border-error text-error'
+            : comparePosition === 'B'
+              ? 'border-success text-success'
+              : 'border-border text-text-muted hover:text-text hover:border-accent'
+          }`}
+      >
+        {comparePosition ?? '⊕'}
+      </button>
 
       {/* Sandbox button or inline error */}
       {sandboxError ? (
