@@ -53,18 +53,38 @@ function extractFieldSubquery(
     }) ?? operations[0];
   if (!operation) return null;
 
-  // Depth-first search: return the path of FieldNodes leading to the target line
+  // Build a map of fragment name → selectionSet for resolving FragmentSpreads
+  const fragmentMap = new Map<string, SelectionSetNode>();
+  for (const def of ast.definitions) {
+    if (def.kind === 'FragmentDefinition') {
+      fragmentMap.set(def.name.value, def.selectionSet);
+    }
+  }
+
+  // Depth-first search: return the path of FieldNodes leading to the target line.
+  // Recurses into InlineFragment and FragmentSpread transparently (they don't add
+  // to the path since they are not fields themselves).
   function findPath(
     selectionSet: SelectionSetNode,
     path: FieldNode[]
   ): FieldNode[] | null {
     for (const sel of selectionSet.selections) {
-      if (sel.kind !== 'Field') continue;
-      const next = [...path, sel];
-      if (sel.loc?.startToken.line === lineNumber) return next;
-      if (sel.selectionSet) {
-        const found = findPath(sel.selectionSet, next);
+      if (sel.kind === 'Field') {
+        const next = [...path, sel];
+        if (sel.loc?.startToken.line === lineNumber) return next;
+        if (sel.selectionSet) {
+          const found = findPath(sel.selectionSet, next);
+          if (found) return found;
+        }
+      } else if (sel.kind === 'InlineFragment') {
+        const found = findPath(sel.selectionSet, path);
         if (found) return found;
+      } else if (sel.kind === 'FragmentSpread') {
+        const fragSet = fragmentMap.get(sel.name.value);
+        if (fragSet) {
+          const found = findPath(fragSet, path);
+          if (found) return found;
+        }
       }
     }
     return null;
@@ -187,11 +207,21 @@ export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
     } catch {
       return lineNums;
     }
+    const fragMap = new Map<string, SelectionSetNode>();
+    for (const def of ast.definitions) {
+      if (def.kind === 'FragmentDefinition') fragMap.set(def.name.value, def.selectionSet);
+    }
     function collectLines(selectionSet: SelectionSetNode) {
       for (const sel of selectionSet.selections) {
-        if (sel.kind !== 'Field') continue;
-        if (sel.loc?.startToken.line) lineNums.add(sel.loc.startToken.line);
-        if (sel.selectionSet) collectLines(sel.selectionSet);
+        if (sel.kind === 'Field') {
+          if (sel.loc?.startToken.line) lineNums.add(sel.loc.startToken.line);
+          if (sel.selectionSet) collectLines(sel.selectionSet);
+        } else if (sel.kind === 'InlineFragment') {
+          collectLines(sel.selectionSet);
+        } else if (sel.kind === 'FragmentSpread') {
+          const fragSet = fragMap.get(sel.name.value);
+          if (fragSet) collectLines(fragSet);
+        }
       }
     }
     for (const def of ast.definitions) {
