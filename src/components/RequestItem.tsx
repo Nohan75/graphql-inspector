@@ -95,6 +95,13 @@ export function RequestItem({
         <span className="text-[11px] font-medium shrink-0 text-text-muted animate-pulse">
           ●●●
         </span>
+      ) : request.timedOut ? (
+        <span
+          title="No response was captured for this request"
+          className="text-[11px] font-medium shrink-0 text-text-muted"
+        >
+          —
+        </span>
       ) : (
         <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
           {request.status}
