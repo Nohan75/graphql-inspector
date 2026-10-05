@@ -15,6 +15,8 @@ export interface GQLRequest {
   timestamp: number;
   /** True while the network response has not yet been received */
   pending?: boolean;
+  /** True when the response never arrived and the pending entry was given up on */
+  timedOut?: boolean;
 }
 
 export type TabId = 'headers' | 'request' | 'response' | 'raw';
