@@ -1,28 +1,28 @@
 # GraphQL Inspector
 
-Extension DevTools (Manifest V3) qui ajoute un onglet **GraphQL** aux outils de développement du navigateur. Elle liste les requêtes GraphQL émises par la page et permet d'inspecter, pour chacune, la query, les variables, les en-têtes et la réponse.
+A DevTools extension (Manifest V3) that adds a **GraphQL** tab to the browser's developer tools. It lists the GraphQL requests sent by the page and lets you inspect the query, variables, headers and response of each one.
 
-## Installation en mode développeur
+## Installing in developer mode
 
-L'extension n'est pas publiée sur le Chrome Web Store. Elle se charge comme extension non empaquetée, à partir de l'archive `.zip` d'une release ou d'un build local.
+The extension is not published on the Chrome Web Store. It is loaded as an unpacked extension, from the `.zip` attached to a release or from a local build.
 
-Elle fonctionne sur Chrome 111+ et les navigateurs basés sur Chromium (Edge, Brave…). Firefox n'a pas été testé.
+It runs on Chrome 111+ and Chromium-based browsers (Edge, Brave…). Firefox has not been tested.
 
-### 1. Récupérer l'extension
+### 1. Get the extension
 
-#### Option A : depuis l'archive de la release
+#### Option A: from the release archive
 
-C'est le chemin le plus court : ni Node.js ni build.
+This is the shortest path: no Node.js, no build.
 
-1. Ouvrir la [dernière release](https://github.com/Nohan75/graphql-inspector/releases/latest).
-2. Dans **Assets**, télécharger `gql-network-<version>-chrome.zip`.
-3. Extraire l'archive dans un dossier que vous conserverez.
+1. Open the [latest release](https://github.com/Nohan75/graphql-inspector/releases/latest).
+2. Under **Assets**, download `gql-network-<version>-chrome.zip`.
+3. Extract the archive into a folder you will keep.
 
-Le navigateur ne charge pas le `.zip` lui-même mais le dossier extrait, et il le relit à chaque démarrage : si ce dossier est déplacé ou supprimé, l'extension cesse de fonctionner.
+The browser loads the extracted folder, not the `.zip`, and reads it again every time it starts: if that folder is moved or deleted, the extension stops working.
 
-#### Option B : depuis les sources
+#### Option B: from source
 
-Il faut Node.js 20.19+ ou 22.12+, avec npm.
+This requires Node.js 20.19+ or 22.12+, with npm.
 
 ```bash
 git clone https://github.com/Nohan75/graphql-inspector.git
@@ -31,159 +31,159 @@ npm install
 npm run build
 ```
 
-Le build est généré dans `.output/chrome-mv3/`.
+The build is written to `.output/chrome-mv3/`.
 
-### 2. Charger l'extension dans le navigateur
+### 2. Load the extension in the browser
 
-1. Ouvrir `chrome://extensions` (`edge://extensions` sur Edge).
-2. Activer le **Mode développeur** (interrupteur en haut à droite sur Chrome, dans le menu de gauche sur Edge).
-3. Cliquer sur **Charger l'extension non empaquetée** (*Load unpacked*).
-4. Sélectionner le dossier qui contient `manifest.json` : le dossier extrait de l'archive (option A) ou `.output/chrome-mv3` (option B).
+1. Open `chrome://extensions` (`edge://extensions` on Edge).
+2. Turn on **Developer mode** (a toggle in the top-right corner on Chrome, in the left-hand menu on Edge).
+3. Click **Load unpacked**.
+4. Select the folder that contains `manifest.json`: the folder extracted from the archive (option A) or `.output/chrome-mv3` (option B).
 
-Sur macOS, le sélecteur de fichiers masque les dossiers commençant par un point, comme `.output` : `Cmd + Maj + .` les affiche.
+On macOS, the file picker hides folders whose name starts with a dot, such as `.output`: `Cmd + Shift + .` shows them.
 
-### 3. Ouvrir le panneau
+### 3. Open the panel
 
-1. Ouvrir la page à inspecter, puis les DevTools (`F12`).
-2. Cliquer sur l'onglet **GraphQL**. S'il n'est pas visible, il se trouve derrière le chevron `»` de la barre d'onglets des DevTools.
-3. Recharger la page ou déclencher une action qui émet des requêtes GraphQL.
+1. Open the page you want to inspect, then DevTools (`F12`).
+2. Click the **GraphQL** tab. If it is not visible, it is behind the `»` chevron in the DevTools tab bar.
+3. Reload the page or trigger an action that sends GraphQL requests.
 
-Deux points à connaître :
+Two things to know:
 
-- La capture ne démarre qu'une fois l'onglet **GraphQL** ouvert. Les requêtes parties avant n'apparaissent pas.
-- Juste après l'installation, les pages déjà ouvertes doivent être rechargées et les DevTools fermés puis rouverts.
+- Capture only starts once the **GraphQL** tab has been opened. Requests sent before that do not appear.
+- Right after installing, pages that were already open must be reloaded, and DevTools closed and reopened.
 
-### Mettre à jour l'extension
+### Updating the extension
 
-Une extension non empaquetée ne se met pas à jour toute seule.
+An unpacked extension does not update itself.
 
-1. Option A : télécharger l'archive de la nouvelle release et remplacer le contenu du dossier extrait. Option B : récupérer les sources à jour et relancer `npm run build`.
-2. Dans `chrome://extensions`, cliquer sur l'icône de rechargement de l'extension.
-3. Fermer puis rouvrir les DevTools et recharger la page.
+1. Option A: download the archive from the new release and replace the contents of the extracted folder. Option B: pull the latest source and run `npm run build` again.
+2. In `chrome://extensions`, click the extension's reload icon.
+3. Close and reopen DevTools, then reload the page.
 
-## Développement
+## Development
 
-`npm run dev` lance WXT en mode développement : il ouvre une instance de Chrome dédiée avec l'extension déjà chargée et reconstruit à chaque modification. Ce build de développement est écrit dans `.output/chrome-mv3-dev/`.
+`npm run dev` starts WXT in development mode: it opens a dedicated Chrome instance with the extension already loaded and rebuilds on every change. This development build is written to `.output/chrome-mv3-dev/`.
 
-Pour tester un build de production après une modification, suivre les étapes de [Mettre à jour l'extension](#mettre-à-jour-lextension).
+To test a production build after a change, follow the steps in [Updating the extension](#updating-the-extension).
 
 ### Scripts
 
-| Commande | Effet |
+| Command | Effect |
 | --- | --- |
-| `npm run dev` | Build de développement avec rechargement automatique |
-| `npm run build` | Build de production dans `.output/chrome-mv3/` |
-| `npm run zip` | Build de production puis archive `.zip` dans `.output/`, celle qui est jointe aux releases |
+| `npm run dev` | Development build with automatic reload |
+| `npm run build` | Production build in `.output/chrome-mv3/` |
+| `npm run zip` | Production build, then a `.zip` archive in `.output/`, the one attached to releases |
 
-### Page de test
+### Test page
 
-`test.html`, à la racine du dépôt, contient des boutons qui envoient des queries et mutations vers des API GraphQL publiques (Rick and Morty, Countries), ce qui permet d'essayer l'extension sans projet GraphQL sous la main.
+`test.html`, at the repository root, has buttons that send queries and mutations to public GraphQL APIs (Rick and Morty, Countries), so you can try the extension without a GraphQL project at hand.
 
-Le plus simple est de la servir en HTTP local, par exemple avec `npx serve .`. Pour l'ouvrir directement en `file://`, il faut d'abord activer **Autoriser l'accès aux URL de fichiers** dans les détails de l'extension.
+The simplest way to use it is to serve it over local HTTP, for example with `npx serve .`. To open it directly as a `file://` URL, first turn on **Allow access to file URLs** in the extension's details.
 
-Le bouton **Run Batch** n'ajoute rien dans le panneau : les requêtes groupées ne sont pas capturées (voir [Limites connues](#limites-connues)).
+The **Run Batch** button adds nothing to the panel: batched requests are not captured (see [Known limits](#known-limits)).
 
-## Fonctionnalités
+## Features
 
-### Capture des requêtes
+### Request capture
 
-Sont capturées les requêtes `POST` dont le corps JSON contient un champ `query`, qu'elles passent par `fetch` ou par `XMLHttpRequest`. Chaque requête apparaît dans la liste dès son envoi, avec un indicateur d'attente, puis se complète à l'arrivée de la réponse.
+`POST` requests whose JSON body has a `query` field are captured, whether they go through `fetch` or `XMLHttpRequest`. Each request shows up in the list as soon as it is sent, with a pending indicator, and is completed when its response arrives.
 
-### Liste des requêtes
+### Request list
 
-- Badge de type : `Q` (query), `M` (mutation), `S` (subscription).
-- Nom de l'opération (`Anonymous` si elle n'en a pas) et URL de l'endpoint.
-- Statut HTTP, en vert pour les 2xx et en rouge à partir de 400. `●●●` signale une réponse en attente, `—` une réponse qui n'a pas été capturée au bout de 30 secondes.
-- **Filter requests…** filtre sur le nom d'opération ou l'URL.
-- **Clear** vide la liste.
-- **Preserve log** conserve la liste lors d'une navigation ou d'un rechargement. Sans cette option, elle est vidée à chaque navigation.
-- La liste défile automatiquement vers la dernière requête et conserve les 500 plus récentes.
-- La largeur de la colonne se règle en faisant glisser le séparateur.
+- Type badge: `Q` (query), `M` (mutation), `S` (subscription).
+- Operation name (`Anonymous` if it has none) and endpoint URL.
+- HTTP status, green for 2xx and red from 400 up. `●●●` means the response is pending, `—` that no response was captured after 30 seconds.
+- **Filter requests…** filters on operation name or URL.
+- **Clear** empties the list.
+- **Preserve log** keeps the list across navigations and reloads. Without it, the list is cleared on every navigation.
+- The list scrolls to the latest request automatically and keeps the 500 most recent ones.
+- Drag the divider to resize the column.
 
-### Détail d'une requête
+### Request details
 
-Un clic sur une requête ouvre quatre onglets :
+Clicking a request opens four tabs:
 
-| Onglet | Contenu |
+| Tab | Content |
 | --- | --- |
-| **Headers** | En-têtes de requête et de réponse |
-| **Request** | Query reformatée, avec coloration syntaxique, numéros de ligne et blocs repliables. Variables affichées en arbre JSON repliable. |
-| **Response** | Réponse en arbre JSON repliable, avec recherche |
-| **Raw** | Corps de la réponse tel que reçu |
+| **Headers** | Request and response headers |
+| **Request** | The query, reformatted, with syntax highlighting, line numbers and foldable blocks. Variables shown as a collapsible JSON tree. |
+| **Response** | The response as a collapsible JSON tree, with search |
+| **Raw** | The response body as received |
 
-La query, les variables, la réponse et le corps brut ont chacun un bouton **Copy**.
+The query, the variables, the response and the raw body each have a **Copy** button.
 
-La recherche de l'onglet **Response** surligne les occurrences et affiche leur nombre. `Entrée` passe à la suivante, `Maj + Entrée` à la précédente, `Échap` efface la recherche.
+Search in the **Response** tab highlights matches and shows how many there are. `Enter` goes to the next match, `Shift + Enter` to the previous one, and `Esc` clears the search.
 
-### Ouverture dans un sandbox
+### Open in a sandbox
 
-Une requête capturée peut être rouverte, query et variables préremplies, dans un sandbox GraphQL (Apollo Sandbox par défaut). Trois points d'entrée :
+A captured request can be reopened in a GraphQL sandbox (Apollo Sandbox by default) with its query and variables pre-filled. There are three entry points:
 
-- le bouton `↗` de chaque ligne de la liste ;
-- le bouton **Open in Sandbox ↗** de l'onglet **Request** ;
-- le bouton `↗` qui apparaît au survol de chaque champ de la query. Il ouvre une sous-requête réduite à ce champ, ses sous-champs et ses parents, en ne gardant que les déclarations de variables réellement utilisées. C'est utile pour isoler le champ fautif d'une grosse query.
+- the `↗` button on each row of the list;
+- the **Open in Sandbox ↗** button in the **Request** tab;
+- the `↗` button that appears when you hover a field in the query. It opens a sub-query reduced to that field, its sub-fields and its parents, keeping only the variable definitions that are actually used. This helps isolate the failing field of a large query.
 
-### Mode comparaison
+### Compare mode
 
-Le bouton `⊕` d'une ligne ajoute la requête à la comparaison. La première sélectionnée devient **A** (rouge), la seconde **B** (vert), et le panneau de détail laisse place à un diff ligne à ligne.
+The `⊕` button on a row adds that request to the comparison. The first one selected becomes **A** (red), the second **B** (green), and the detail panel is replaced by a line-by-line diff.
 
-- Trois onglets : **Query**, **Variables**, **Response**, chacun avec un compteur de lignes différentes.
-- Les lignes `−` n'existent que dans A, les lignes `+` que dans B.
-- Sélectionner une troisième requête remplace la plus ancienne des deux.
-- Un nouveau clic sur `A` ou `B` retire la requête ; **✕ Close** quitte la comparaison.
+- Three tabs: **Query**, **Variables** and **Response**, each with a count of differing lines.
+- `−` lines exist only in A, `+` lines only in B.
+- Selecting a third request replaces the older of the two.
+- Clicking `A` or `B` again removes that request; **✕ Close** exits the comparison.
 
-### Réglages
+### Settings
 
-Le bouton `⚙` ouvre les réglages du sandbox, enregistrés dans `chrome.storage.local` :
+The `⚙` button opens the sandbox settings, which are stored in `chrome.storage.local`:
 
-- **Sandbox URL** : adresse du sandbox, en `http://` ou `https://`. Valeur par défaut : `https://studio.apollographql.com/sandbox/explorer`.
-- **URL Format** : façon dont la query est passée dans l'URL.
+- **Sandbox URL**: the address of the sandbox, in `http://` or `https://`. Default: `https://studio.apollographql.com/sandbox/explorer`.
+- **URL Format**: how the query is passed in the URL.
 
-| Format | Paramètres générés | Cas d'usage |
+| Format | Generated parameters | Use case |
 | --- | --- | --- |
-| Auto-detect | Apollo si l'URL contient `apollographql` ou `apollo.dev`, sinon GraphiQL | Par défaut |
-| Apollo Studio | `?document=…&endpoint=…&variables=…` | Apollo Sandbox hébergé, l'endpoint transmis est celui de la requête capturée |
-| Apollo Playground | `?document=…&variables=…` | Sandbox servi par votre propre endpoint GraphQL |
-| GraphiQL | `?query=…&variables=…` | Instance GraphiQL |
+| Auto-detect | Apollo if the URL contains `apollographql` or `apollo.dev`, GraphiQL otherwise | Default |
+| Apollo Studio | `?document=…&endpoint=…&variables=…` | Hosted Apollo Sandbox; the endpoint passed is the one of the captured request |
+| Apollo Playground | `?document=…&variables=…` | Sandbox served by your own GraphQL endpoint |
+| GraphiQL | `?query=…&variables=…` | GraphiQL instance |
 
-### Confidentialité
+### Privacy
 
-- L'interception est inactive par défaut. Elle ne s'active que dans l'onglet dont le panneau **GraphQL** est ouvert et se désactive à sa fermeture ; rien n'est capturé sur les autres sites.
-- Les valeurs des en-têtes sensibles (`Authorization`, `Cookie`, `X-API-Key`, jetons CSRF…) sont masquées lors de la capture dans la page, seul leur nom est conservé. Quand l'API réseau des DevTools fournit les en-têtes réels, ce sont eux qui s'affichent ; ils ne sortent pas des DevTools.
-- Les requêtes capturées restent en mémoire dans le panneau et ne sont envoyées nulle part. Seule exception, à votre initiative : **Open in Sandbox** transmet la query et les variables au sandbox configuré, via l'URL.
+- Interception is off by default. It is only active in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
+- Values of sensitive headers (`Authorization`, `Cookie`, `X-API-Key`, CSRF tokens…) are redacted when captured in the page; only the header name is kept. When the DevTools network API provides the real headers, those are shown instead; they do not leave DevTools.
+- Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL.
 
-## Limites connues
+## Known limits
 
-- Ne sont pas capturées : les requêtes `GET`, les requêtes groupées (corps JSON sous forme de tableau), les persisted queries envoyées sans champ `query` et les subscriptions sur WebSocket.
-- Les corps de réponse sont tronqués à 2 Mo et les queries de plus de 500 Ko sont ignorées.
-- Au-delà de 300 lignes, le diff du mode comparaison n'aligne plus les lignes : il affiche tout A puis tout B.
+- Not captured: `GET` requests, batched requests (a JSON body that is an array), persisted queries sent without a `query` field, and subscriptions over WebSocket.
+- Response bodies are truncated at 2 MB, and queries over 500 KB are ignored.
+- Beyond 300 lines, the compare-mode diff no longer aligns lines: it shows all of A, then all of B.
 
-## Structure du projet
+## Project structure
 
-L'extension repose sur [WXT](https://wxt.dev), React 19, TypeScript et Tailwind CSS 4.
+The extension is built with [WXT](https://wxt.dev), React 19, TypeScript and Tailwind CSS 4.
 
 ```
-page (monde MAIN)          src/entrypoints/interceptor.content.ts   enveloppe fetch et XHR
+page (MAIN world)          src/entrypoints/interceptor.content.ts   wraps fetch and XHR
    │ window.postMessage
-content script (isolé)     src/entrypoints/content.ts               relais page ↔ extension
+content script (isolated)  src/entrypoints/content.ts               page ↔ extension bridge
    │ chrome.runtime
-service worker             src/entrypoints/background.ts            webRequest + relais par onglet
-   │ port « devtools-panel »
-panneau DevTools           src/entrypoints/panel/                   interface React
+service worker             src/entrypoints/background.ts            webRequest + per-tab relay
+   │ "devtools-panel" port
+DevTools panel             src/entrypoints/panel/                   React UI
 ```
 
-| Dossier | Rôle |
+| Folder | Role |
 | --- | --- |
-| `src/entrypoints/` | Points d'entrée de l'extension : service worker, content scripts, page DevTools, panneau |
-| `src/components/` | Composants React du panneau |
-| `src/hooks/` | `useRequests` (collecte et corrélation requête/réponse), `useSettings` |
-| `src/utils/` | Analyse GraphQL, coloration syntaxique, diff, construction des URL de sandbox |
+| `src/entrypoints/` | Extension entry points: service worker, content scripts, DevTools page, panel |
+| `src/components/` | React components of the panel |
+| `src/hooks/` | `useRequests` (collection and request/response correlation), `useSettings` |
+| `src/utils/` | GraphQL parsing, syntax highlighting, diff, sandbox URL building |
 
-### Permissions demandées
+### Requested permissions
 
 | Permission | Usage |
 | --- | --- |
-| `webRequest` | Détecter les requêtes GraphQL dès leur envoi |
-| `tabs` | Activer la capture dans l'onglet inspecté et ouvrir le sandbox dans un nouvel onglet |
-| `storage` | Enregistrer les réglages du sandbox |
-| `<all_urls>` | Fonctionner sur n'importe quel site inspecté |
+| `webRequest` | Detect GraphQL requests as soon as they are sent |
+| `tabs` | Turn capture on in the inspected tab and open the sandbox in a new tab |
+| `storage` | Save the sandbox settings |
+| `<all_urls>` | Work on any inspected site |
