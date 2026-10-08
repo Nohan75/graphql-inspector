@@ -2,6 +2,28 @@
 
 A DevTools extension (Manifest V3) that adds a **GraphQL** tab to the browser's developer tools. It lists the GraphQL requests sent by the page and lets you inspect the query, variables, headers and response of each one.
 
+## Table of contents
+
+- [Installing in developer mode](#installing-in-developer-mode)
+  - [1. Get the extension](#1-get-the-extension)
+  - [2. Load the extension in the browser](#2-load-the-extension-in-the-browser)
+  - [3. Open the panel](#3-open-the-panel)
+  - [Updating the extension](#updating-the-extension)
+- [Development](#development)
+  - [Scripts](#scripts)
+  - [Test page](#test-page)
+- [Features](#features)
+  - [Request capture](#request-capture)
+  - [Request list](#request-list)
+  - [Request details](#request-details)
+  - [Open in a sandbox](#open-in-a-sandbox)
+  - [Compare mode](#compare-mode)
+  - [Settings](#settings)
+  - [Privacy](#privacy)
+- [Known limits](#known-limits)
+- [Project structure](#project-structure)
+  - [Requested permissions](#requested-permissions)
+
 ## Installing in developer mode
 
 The extension is not published on the Chrome Web Store. It is loaded as an unpacked extension, from the `.zip` attached to a release or from a local build.
