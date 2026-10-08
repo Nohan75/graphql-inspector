@@ -11,6 +11,7 @@ A DevTools extension (Manifest V3) that adds a **GraphQL** tab to the browser's 
   - [Updating the extension](#updating-the-extension)
 - [Development](#development)
   - [Scripts](#scripts)
+  - [Releases](#releases)
   - [Test page](#test-page)
 - [Features](#features)
   - [Request capture](#request-capture)
@@ -96,6 +97,14 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm run dev` | Development build with automatic reload |
 | `npm run build` | Production build in `.output/chrome-mv3/` |
 | `npm run zip` | Production build, then a `.zip` archive in `.output/`, the one attached to releases |
+
+### Releases
+
+The release archive is published by a GitHub Actions workflow, [`.github/workflows/release.yml`](.github/workflows/release.yml):
+
+- There is one release per version. To publish, bump `version` in `wxt.config.ts`: the next push to `wxt-react` creates the release `v<version>`, tagged on that commit, with the zip attached.
+- A push that leaves the version unchanged builds the zip but publishes nothing.
+- Pull requests targeting `wxt-react` run the same build as a check, without publishing anything.
 
 ### Test page
 
