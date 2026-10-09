@@ -6,9 +6,10 @@ name: Release zip
 #                            release yet, create one with the zip attached
 #   pull request          -> build the zip only, as a check; nothing is published
 #
-# The release tag is v<version>, where <version> is `manifest.version` in
-# wxt.config.ts, and it is created on the pushed wxt-react commit. A push that
-# leaves the version unchanged publishes nothing: bump the version to release.
+# The release tag is v<version>, where <version> is the `version` of
+# package.json, which WXT copies into the built manifest. The tag is created on
+# the pushed wxt-react commit. A push that leaves the version unchanged
+# publishes nothing: run `npm version patch` (or minor, major) to release.
 
 on:
   push:
@@ -73,7 +74,7 @@ jobs:
         id: check
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "::notice::Release $TAG already exists, nothing to publish. Bump manifest.version in wxt.config.ts to release."
+            echo "::notice::Release $TAG already exists, nothing to publish. Bump the version in package.json (npm version patch) to release."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           elif gh api "repos/$GH_REPO/git/ref/tags/$TAG" > /dev/null 2>&1; then
             # `gh release create` would reuse that tag wherever it points,

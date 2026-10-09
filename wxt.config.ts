@@ -7,7 +7,6 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     name: 'GraphQL Inspector',
-    version: '2.0.1',
     description: 'Inspect GraphQL queries and mutations',
     permissions: ['storage', 'tabs', 'webRequest'],
     host_permissions: ['<all_urls>'],

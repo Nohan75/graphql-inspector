@@ -102,7 +102,8 @@ To test a production build after a change, follow the steps in [Updating the ext
 
 The release archive is published by a GitHub Actions workflow, [`.github/workflows/release.yml`](.github/workflows/release.yml):
 
-- There is one release per version. To publish, bump `version` in `wxt.config.ts`, the value the release is named after, and keep `package.json` in step with `npm version <version> --no-git-tag-version`. The next push to `wxt-react` creates the release `v<version>`, tagged on that commit, with the zip attached.
+- There is one release per version, and the version lives in `package.json` only: WXT copies it into the manifest. To publish, run `npm version patch` (or `minor`, `major`) and commit the result. The next push to `wxt-react` creates the release `v<version>`, tagged on that commit, with the zip attached.
+- `npm version` only edits `package.json` and `package-lock.json` here: `.npmrc` turns off the commit and tag it would otherwise create, so the workflow is the only thing that creates release tags.
 - A push that leaves the version unchanged builds the zip but publishes nothing.
 - Pull requests targeting `wxt-react` run the same build as a check, without publishing anything.
 
