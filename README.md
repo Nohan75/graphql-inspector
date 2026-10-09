@@ -11,6 +11,7 @@ A DevTools extension (Manifest V3) that adds a **GraphQL** tab to the browser's 
   - [Updating the extension](#updating-the-extension)
 - [Development](#development)
   - [Scripts](#scripts)
+  - [Panel preview](#panel-preview)
   - [Releases](#releases)
   - [Test page](#test-page)
 - [Features](#features)
@@ -98,8 +99,21 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm run build` | Production build in `.output/chrome-mv3/` |
 | `npm run zip` | Production build, then a `.zip` archive in `.output/`, the one attached to releases |
 | `npm test` | Runs the tests once with Vitest |
+| `npm run typecheck` | Checks the types of the whole project |
+| `npm run lint` | Runs ESLint |
+| `npm run panel` | Serves the panel preview at `http://localhost:5183/` |
 
 Tests sit next to the code they cover, as `*.test.ts` files under `src/`.
+
+### Panel preview
+
+`npm run panel` serves the panel in an ordinary page, without a browser extension: the same interface, fed by sample requests and a simulated `chrome` API. Use it to work on the interface or to look at a change.
+
+- The sample requests are in `preview/fixtures.ts`.
+- A sandbox would open in a new tab; the preview prints its URL under the panel instead.
+- `?click=` parameters replay clicks in order, to reach a given state from the address bar. For example, `?click=Response` opens the Response tab, and `?click=Add%20to%20compare%232&click=Add%20to%20compare%232` puts the second and third requests in compare mode.
+
+The preview does not capture anything. To exercise the capture itself, load the extension in a browser.
 
 ### Releases
 
@@ -107,9 +121,9 @@ The release archive is published by a GitHub Actions workflow, [`.github/workflo
 
 - There is one release per version, and the version lives in `package.json` only: WXT copies it into the manifest. To publish, run `npm version patch` (or `minor`, `major`) and commit the result. The next push to `main` creates the release `v<version>`, tagged on that commit, with the zip attached.
 - `npm version` only edits `package.json` and `package-lock.json` here: `.npmrc` turns off the commit and tag it would otherwise create, so the workflow is the only thing that creates release tags.
-- The tests run before the zip is built. If one fails, the job stops and nothing is published.
-- A push that leaves the version unchanged runs the tests and builds the zip but publishes nothing.
-- Pull requests targeting `main` run the same tests and build as a check, without publishing anything.
+- The type check, the linter and the tests run before the zip is built. If one fails, the job stops and nothing is published.
+- A push that leaves the version unchanged runs the checks and builds the zip but publishes nothing.
+- Pull requests targeting `main` run the same checks and build, without publishing anything.
 
 ### Test page
 
