@@ -7,6 +7,7 @@ import {
   type DocumentNode,
   type FieldNode,
   type FragmentDefinitionNode,
+  type InlineFragmentNode,
   type OperationDefinitionNode,
   type SelectionSetNode,
 } from 'graphql';
@@ -76,6 +77,9 @@ export function parseQueryDocument(source: string): QueryDocument {
     },
   };
 }
+
+/** One selection on the way from an operation down to a field */
+type Step = FieldNode | InlineFragmentNode;
 
 function normalise(source: string): string {
   try {
@@ -161,13 +165,15 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
     }
   }
 
-  // Depth-first search: return the path of FieldNodes leading to the target line.
-  // Recurses into InlineFragment and FragmentSpread transparently (they don't add
-  // to the path since they are not fields themselves).
+  // Depth-first search: return the path leading to the field on the target line.
+  // A fragment crossed on the way is part of the path: it carries the type
+  // condition without which the field may not exist on its parent. A named
+  // fragment joins the path as an inline fragment with the same condition,
+  // since the spread itself would bring every field of the fragment along.
   function findPath(
     selectionSet: SelectionSetNode,
-    path: FieldNode[]
-  ): FieldNode[] | null {
+    path: Step[]
+  ): Step[] | null {
     for (const sel of selectionSet.selections) {
       if (sel.kind === 'Field') {
         const next = [...path, sel];
@@ -177,12 +183,19 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
           if (found) return found;
         }
       } else if (sel.kind === 'InlineFragment') {
-        const found = findPath(sel.selectionSet, path);
+        const found = findPath(sel.selectionSet, [...path, sel]);
         if (found) return found;
       } else if (sel.kind === 'FragmentSpread') {
         const fragment = fragmentMap.get(sel.name.value);
         if (fragment) {
-          const found = findPath(fragment.selectionSet, path);
+          const inline: InlineFragmentNode = {
+            kind: Kind.INLINE_FRAGMENT,
+            typeCondition: fragment.typeCondition,
+            // the spread's own directives, e.g. @include, still apply
+            directives: sel.directives,
+            selectionSet: fragment.selectionSet,
+          };
+          const found = findPath(fragment.selectionSet, [...path, inline]);
           if (found) return found;
         }
       }
@@ -195,7 +208,7 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
 
   // Rebuild from leaf → root.
   // The leaf keeps its full selection set; each parent wraps only the child below it.
-  let inner: FieldNode = path[path.length - 1];
+  let inner: Step = path[path.length - 1];
   for (let i = path.length - 2; i >= 0; i--) {
     inner = {
       ...path[i],

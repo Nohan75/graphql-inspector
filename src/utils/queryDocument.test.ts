@@ -204,6 +204,73 @@ describe('sub-query of a line', () => {
     );
   });
 
+  it('keeps the type condition of an inline fragment on the way to the field', () => {
+    const subquery = subqueryOf(
+      'query S($t: String!) { search(text: $t) { ... on Character { status name } ... on Location { dimension } } }',
+      'status'
+    );
+
+    expect(subquery?.text).toBe(
+      lines(
+        'query S($t: String!) {',
+        '  search(text: $t) {',
+        '    ... on Character {',
+        '      status',
+        '    }',
+        '  }',
+        '}'
+      )
+    );
+  });
+
+  it('turns a named fragment on the way to the field into its type condition', () => {
+    const subquery = subqueryOf(
+      `
+        query S($t: String!) { search(text: $t) { ...Place } }
+        fragment Place on Location { name dimension }
+      `,
+      'dimension'
+    );
+
+    // not `...Place`, which would bring `name` along with the field asked for
+    expect(subquery?.text).toBe(
+      lines(
+        'query S($t: String!) {',
+        '  search(text: $t) {',
+        '    ... on Location {',
+        '      dimension',
+        '    }',
+        '  }',
+        '}'
+      )
+    );
+  });
+
+  it('keeps the directives of a named fragment on the way to the field', () => {
+    const subquery = subqueryOf(
+      `
+        query S($t: String!, $places: Boolean!) {
+          search(text: $t) { ...Place @include(if: $places) }
+        }
+        fragment Place on Location { name dimension }
+      `,
+      'dimension'
+    );
+
+    expect(subquery).toEqual({
+      text: lines(
+        'query S($t: String!, $places: Boolean!) {',
+        '  search(text: $t) {',
+        '    ... on Location @include(if: $places) {',
+        '      dimension',
+        '    }',
+        '  }',
+        '}'
+      ),
+      variableNames: ['t', 'places'],
+    });
+  });
+
   it('belongs to the operation that contains the line', () => {
     const subquery = subqueryOf(
       'query A { characters { name } } query B { characters { status } }',
@@ -257,6 +324,17 @@ describe('every sub-query of a valid query document is valid', () => {
          }
        }
        fragment Episodes on Character { more: episode(first: $deep) { name } }`,
+    ],
+    [
+      'fields behind inline fragments on a union',
+      'query S($t: String!) { search(text: $t) { ... on Character { status name } ... on Location { dimension } } }',
+    ],
+    [
+      'fields behind a named fragment on a union, with a directive',
+      `query S($t: String!, $places: Boolean!) {
+         search(text: $t) { ...Place @include(if: $places) ... on Character { name } }
+       }
+       fragment Place on Location { name dimension }`,
     ],
   ])('%s', (_label, source) => {
     const doc = parseQueryDocument(source);
