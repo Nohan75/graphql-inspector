@@ -26,8 +26,8 @@ export interface Subquery {
  */
 export interface QueryDocument {
   /**
-   * Normalised text. When the source does not parse, the trimmed source, so
-   * that a broken query can still be displayed.
+   * Normalised text. When the source does not parse, the source without its
+   * common indentation, so that a broken query can still be displayed.
    */
   readonly text: string;
   /**
@@ -81,8 +81,10 @@ function normalise(source: string): string {
   try {
     return print(parse(source));
   } catch {
-    // Fallback: strip common indentation when graphql parse fails
-    return stripCommonIndent(source.trim());
+    // Fallback: strip common indentation when graphql parse fails. Strip
+    // before trimming: trimming first would take the indentation off the
+    // first line alone and leave nothing in common.
+    return stripCommonIndent(source).trim();
   }
 }
 

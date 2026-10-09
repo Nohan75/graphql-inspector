@@ -52,10 +52,17 @@ describe('text of a query document', () => {
     );
   });
 
-  it('is the trimmed source when the query does not parse', () => {
-    const doc = parseQueryDocument('  query Q {\n    character {\n');
+  it('is the source without its common indentation when the query does not parse', () => {
+    const doc = parseQueryDocument('\n    query Q {\n      character {\n        name\n');
 
-    expect(doc.text).toBe('query Q {\n    character {');
+    expect(doc.text).toBe('query Q {\n  character {\n    name');
+  });
+
+  it('keeps the indentation that is not common to every line', () => {
+    // the first line starts at the margin, as in a template literal
+    const doc = parseQueryDocument('query Q {\n      character {\n');
+
+    expect(doc.text).toBe('query Q {\n      character {');
   });
 });
 
