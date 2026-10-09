@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { parse, print } from 'graphql';
 import type { GQLRequest } from '../types';
 import { diffLines, type DiffLine } from '../utils/diff';
-import { stripCommonIndent } from '../utils/graphql';
+import { parseQueryDocument } from '../utils/queryDocument';
 
 interface ComparePanelProps {
   requestA: GQLRequest; // first selected → "−" side (red)
@@ -13,11 +12,7 @@ interface ComparePanelProps {
 type CompareTab = 'query' | 'variables' | 'response';
 
 function normalizeQuery(q: string): string {
-  try {
-    return print(parse(q));
-  } catch {
-    return stripCommonIndent(q.trim());
-  }
+  return parseQueryDocument(q).text;
 }
 
 function normalizeValue(v: unknown): string {

@@ -1,139 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import {
-  parse,
-  print,
-  type OperationDefinitionNode,
-  type SelectionSetNode,
-  type FieldNode,
-  type ValueNode,
-} from 'graphql';
 import { tokenizeLine, tokenClassMap } from '../utils/highlight';
-import { stripCommonIndent } from '../utils/graphql';
+import { parseQueryDocument, type Subquery } from '../utils/queryDocument';
 
 interface QueryEditorProps {
   query: string;
-  /** Called with a minimal sub-query string when the user clicks a line's ↗ button */
-  onOpenLine?: (subquery: string) => void;
-}
-
-/**
- * Given the normalized query and a 1-based line number, returns a minimal
- * query that contains only the field on that line, all its children (if any),
- * and all its ancestor fields up to the operation root.
- *
- * Example — clicking "lat" in:
- *   query Q { assets { location { lat lng } } }
- * returns:
- *   query Q { assets { location { lat } } }
- */
-function extractFieldSubquery(
-  normalizedQuery: string,
-  lineNumber: number
-): string | null {
-  let ast;
-  try {
-    ast = parse(normalizedQuery);
-  } catch {
-    return null;
-  }
-
-  const operations = ast.definitions.filter(
-    (d): d is OperationDefinitionNode => d.kind === 'OperationDefinition'
-  );
-  const operation =
-    operations.find((op) => {
-      const startLine = op.loc?.startToken.line;
-      const endLine = op.loc?.endToken.line;
-      return (
-        startLine !== undefined &&
-        endLine !== undefined &&
-        startLine <= lineNumber &&
-        lineNumber <= endLine
-      );
-    }) ?? operations[0];
-  if (!operation) return null;
-
-  // Build a map of fragment name → selectionSet for resolving FragmentSpreads
-  const fragmentMap = new Map<string, SelectionSetNode>();
-  for (const def of ast.definitions) {
-    if (def.kind === 'FragmentDefinition') {
-      fragmentMap.set(def.name.value, def.selectionSet);
-    }
-  }
-
-  // Depth-first search: return the path of FieldNodes leading to the target line.
-  // Recurses into InlineFragment and FragmentSpread transparently (they don't add
-  // to the path since they are not fields themselves).
-  function findPath(
-    selectionSet: SelectionSetNode,
-    path: FieldNode[]
-  ): FieldNode[] | null {
-    for (const sel of selectionSet.selections) {
-      if (sel.kind === 'Field') {
-        const next = [...path, sel];
-        if (sel.loc?.startToken.line === lineNumber) return next;
-        if (sel.selectionSet) {
-          const found = findPath(sel.selectionSet, next);
-          if (found) return found;
-        }
-      } else if (sel.kind === 'InlineFragment') {
-        const found = findPath(sel.selectionSet, path);
-        if (found) return found;
-      } else if (sel.kind === 'FragmentSpread') {
-        const fragSet = fragmentMap.get(sel.name.value);
-        if (fragSet) {
-          const found = findPath(fragSet, path);
-          if (found) return found;
-        }
-      }
-    }
-    return null;
-  }
-
-  const path = findPath(operation.selectionSet, []);
-  if (!path || path.length === 0) return null;
-
-  // Rebuild from leaf → root.
-  // The leaf keeps its full selection set; each parent wraps only the child below it.
-  let inner: FieldNode = path[path.length - 1];
-  for (let i = path.length - 2; i >= 0; i--) {
-    inner = {
-      ...path[i],
-      selectionSet: { kind: 'SelectionSet', selections: [inner] },
-    };
-  }
-
-  // Collect variable names referenced in the extracted subtree so we only
-  // keep the variableDefinitions that are actually used. Spreading ...operation
-  // would carry over all original variables, causing GraphQL validation errors
-  // like "Variable '$x' is never used" for variables not in this sub-query.
-  const usedVars = new Set<string>();
-  function collectVars(field: FieldNode) {
-    function visitValue(v: ValueNode) {
-      if (v.kind === 'Variable') {
-        usedVars.add(v.name.value);
-      } else if (v.kind === 'ListValue') {
-        v.values.forEach(visitValue);
-      } else if (v.kind === 'ObjectValue') {
-        v.fields.forEach((f) => visitValue(f.value));
-      }
-    }
-    field.arguments?.forEach((arg) => visitValue(arg.value));
-    field.selectionSet?.selections.forEach((sel) => {
-      if (sel.kind === 'Field') collectVars(sel);
-    });
-  }
-  collectVars(inner);
-
-  const newOp: OperationDefinitionNode = {
-    ...operation,
-    variableDefinitions: (operation.variableDefinitions ?? []).filter((vd) =>
-      usedVars.has(vd.variable.name.value)
-    ),
-    selectionSet: { kind: 'SelectionSet', selections: [inner] },
-  };
-
-  return print(newOp);
+  /** Called with the sub-query of a line when the user clicks that line's ↗ button */
+  onOpenLine?: (subquery: Subquery) => void;
 }
 
 interface LineInfo {
@@ -187,50 +59,9 @@ function buildLineInfos(lines: string[]): LineInfo[] {
 export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
   const [collapsedLines, setCollapsedLines] = useState<Set<number>>(new Set());
 
-  const normalizedQuery = useMemo(() => {
-    try {
-      return print(parse(query));
-    } catch {
-      // Fallback: strip common indentation when graphql parse fails
-      return stripCommonIndent(query.trim());
-    }
-  }, [query]);
-  const rawLines = useMemo(() => normalizedQuery.split('\n'), [normalizedQuery]);
+  const doc = useMemo(() => parseQueryDocument(query), [query]);
+  const rawLines = useMemo(() => doc.text.split('\n'), [doc]);
   const lineInfos = useMemo(() => buildLineInfos(rawLines), [rawLines]);
-
-  // Collect line numbers that correspond to a GraphQL field.
-  // Skip the parse work entirely when onOpenLine is not provided (sandbox not configured).
-  const fieldLineNumbers = useMemo(() => {
-    const lineNums = new Set<number>();
-    if (!onOpenLine) return lineNums;
-    let ast;
-    try {
-      ast = parse(normalizedQuery);
-    } catch {
-      return lineNums;
-    }
-    const fragMap = new Map<string, SelectionSetNode>();
-    for (const def of ast.definitions) {
-      if (def.kind === 'FragmentDefinition') fragMap.set(def.name.value, def.selectionSet);
-    }
-    function collectLines(selectionSet: SelectionSetNode) {
-      for (const sel of selectionSet.selections) {
-        if (sel.kind === 'Field') {
-          if (sel.loc?.startToken.line) lineNums.add(sel.loc.startToken.line);
-          if (sel.selectionSet) collectLines(sel.selectionSet);
-        } else if (sel.kind === 'InlineFragment') {
-          collectLines(sel.selectionSet);
-        } else if (sel.kind === 'FragmentSpread') {
-          const fragSet = fragMap.get(sel.name.value);
-          if (fragSet) collectLines(fragSet);
-        }
-      }
-    }
-    for (const def of ast.definitions) {
-      if (def.kind === 'OperationDefinition') collectLines(def.selectionSet);
-    }
-    return lineNums;
-  }, [normalizedQuery]);
 
   // Determine hidden lines
   const hiddenLines = useMemo(() => {
@@ -263,7 +94,9 @@ export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
         const isCollapsed = collapsedLines.has(info.lineNumber);
         const tokens = tokenizeLine(info.text);
 
-        const isField = onOpenLine && fieldLineNumbers.has(info.lineNumber);
+        // Field lines are only asked for when a sandbox is configured: they are
+        // computed on first use, so a plain display never pays for them.
+        const isField = onOpenLine && doc.fieldLines.has(info.lineNumber);
 
         return (
           <div
@@ -313,7 +146,7 @@ export function QueryEditor({ query, onOpenLine }: QueryEditorProps) {
                 type="button"
                 className="ml-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 cursor-pointer text-accent text-[10px] leading-none bg-transparent border-none p-0"
                 onClick={() => {
-                  const sub = extractFieldSubquery(normalizedQuery, info.lineNumber);
+                  const sub = doc.subqueryAt(info.lineNumber);
                   if (sub) onOpenLine(sub);
                 }}
                 aria-label="Open this field in sandbox"

@@ -30,22 +30,6 @@ export function parseOperationName(query: string): string {
 }
 
 /**
- * Strip common leading whitespace indentation from a query string.
- */
-export function stripCommonIndent(query: string): string {
-  const lines = query.split('\n');
-  const nonEmpty = lines.filter((l) => l.trim().length > 0);
-  if (nonEmpty.length === 0) return query;
-
-  const minIndent = Math.min(
-    ...nonEmpty.map((l) => l.match(/^(\s*)/)?.[1].length ?? 0)
-  );
-  if (minIndent === 0) return query;
-
-  return lines.map((l) => l.slice(minIndent)).join('\n');
-}
-
-/**
  * Determine if a network request is a GraphQL request.
  */
 export function isGraphQLRequest(body: string): boolean {

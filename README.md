@@ -97,6 +97,9 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm run dev` | Development build with automatic reload |
 | `npm run build` | Production build in `.output/chrome-mv3/` |
 | `npm run zip` | Production build, then a `.zip` archive in `.output/`, the one attached to releases |
+| `npm test` | Runs the tests once with Vitest |
+
+Tests sit next to the code they cover, as `*.test.ts` files under `src/`.
 
 ### Releases
 
@@ -104,8 +107,9 @@ The release archive is published by a GitHub Actions workflow, [`.github/workflo
 
 - There is one release per version, and the version lives in `package.json` only: WXT copies it into the manifest. To publish, run `npm version patch` (or `minor`, `major`) and commit the result. The next push to `main` creates the release `v<version>`, tagged on that commit, with the zip attached.
 - `npm version` only edits `package.json` and `package-lock.json` here: `.npmrc` turns off the commit and tag it would otherwise create, so the workflow is the only thing that creates release tags.
-- A push that leaves the version unchanged builds the zip but publishes nothing.
-- Pull requests targeting `main` run the same build as a check, without publishing anything.
+- The tests run before the zip is built. If one fails, the job stops and nothing is published.
+- A push that leaves the version unchanged runs the tests and builds the zip but publishes nothing.
+- Pull requests targeting `main` run the same tests and build as a check, without publishing anything.
 
 ### Test page
 
@@ -153,7 +157,7 @@ A captured request can be reopened in a GraphQL sandbox (Apollo Sandbox by defau
 
 - the `↗` button on each row of the list;
 - the **Open in Sandbox ↗** button in the **Request** tab;
-- the `↗` button that appears when you hover a field in the query. It opens a sub-query reduced to that field, its sub-fields and its parents, keeping only the variable definitions that are actually used. This helps isolate the failing field of a large query.
+- the `↗` button that appears when you hover a field in the query. It opens a sub-query reduced to that field, its sub-fields and its parents. The sub-query brings the fragments it uses, declares only the variables it uses, and only the values of those variables are sent. This helps isolate the failing field of a large query.
 
 ### Compare mode
 
@@ -182,7 +186,7 @@ The `⚙` button opens the sandbox settings, which are stored in `chrome.storage
 
 - Interception is off by default. It is only active in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
 - Values of sensitive headers (`Authorization`, `Cookie`, `X-API-Key`, CSRF tokens…) are redacted when captured in the page; only the header name is kept. When the DevTools network API provides the real headers, those are shown instead; they do not leave DevTools.
-- Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL.
+- Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL. The per-field `↗` button only passes the variables its sub-query uses.
 
 ## Known limits
 
