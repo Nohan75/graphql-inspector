@@ -1,0 +1,3 @@
+# Text files are LF in the repository and in every checkout, whatever the OS
+# or the local core.autocrlf setting.
+* text=auto eol=lf

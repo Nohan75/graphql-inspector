@@ -1,0 +1,13 @@
+/* The panel's own stylesheet, unchanged. */
+@import "../src/styles/globals.css";
+
+/* Tailwind only looks for class names under the folder it is served from,
+   which here is preview/. The panel's classes are in src/. */
+@source "../src";
+
+/* The DevTools panel fills its frame; so does the preview. */
+html,
+body,
+#root {
+  height: 100%;
+}

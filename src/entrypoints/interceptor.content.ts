@@ -184,7 +184,7 @@ export default defineContentScript({
             const responseHeaders = headerList(res.headers);
             const status = res.status;
             // clone() so the page still receives an unread body
-            let copy: Response | null = null;
+            let copy: Response | null;
             try {
               copy = res.clone();
             } catch {
@@ -251,7 +251,7 @@ export default defineContentScript({
           });
 
           this.addEventListener('loadend', () => {
-            let responseText = '';
+            let responseText: string;
             try {
               // responseType '' or 'text' exposes responseText; others do not
               responseText = this.responseType === '' || this.responseType === 'text'

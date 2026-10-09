@@ -303,6 +303,8 @@ export function useRequests(preserveLog: boolean) {
         port = chrome.runtime.connect({ name: 'devtools-panel' });
         port.postMessage({ type: 'init', tabId });
 
+        // The messages crossing the contexts are not typed yet: that is #8.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         port.onMessage.addListener((msg: { type: string; payload: any }) => {
           if (msg.type === 'gql_pending') handlePendingMessage(msg.payload);
           else if (msg.type === 'gql_request') handleInterceptorRequest(msg.payload);
