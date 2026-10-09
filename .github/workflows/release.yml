@@ -2,11 +2,11 @@ name: Release zip
 
 # Publishes the downloadable extension archive, one release per version.
 #
-#   push to main          -> run the tests and build the zip; if the manifest
-#                            version has no release yet, create one with the
-#                            zip attached
-#   pull request          -> run the tests and build the zip, as a check;
-#                            nothing is published
+#   push to main          -> run the checks (types, lint, tests) and build the
+#                            zip; if the manifest version has no release yet,
+#                            create one with the zip attached
+#   pull request          -> run the checks and build the zip; nothing is
+#                            published
 #
 # The release tag is v<version>, where <version> is the `version` of
 # package.json, which WXT copies into the built manifest. The tag is created on
@@ -43,7 +43,11 @@ jobs:
 
       - run: npm ci
 
-      # Before the zip: a failing test stops the job, so nothing is published
+      # Before the zip: a failing check stops the job, so nothing is published
+      - run: npm run typecheck
+
+      - run: npm run lint
+
       - run: npm test
 
       - run: npm run zip

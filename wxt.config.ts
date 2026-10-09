@@ -2,7 +2,6 @@ import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  extensionApi: 'chrome',
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
   manifest: {
