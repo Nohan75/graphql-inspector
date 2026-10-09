@@ -2,8 +2,11 @@ import {
   Kind,
   parse,
   print,
+  visit,
+  type ASTNode,
   type DocumentNode,
   type FieldNode,
+  type FragmentDefinitionNode,
   type OperationDefinitionNode,
   type SelectionSetNode,
   type ValueNode,
@@ -151,11 +154,11 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
     }) ?? operations[0];
   if (!operation) return null;
 
-  // Build a map of fragment name → selectionSet for resolving FragmentSpreads
-  const fragmentMap = new Map<string, SelectionSetNode>();
+  // Build a map of fragment name → definition for resolving FragmentSpreads
+  const fragmentMap = new Map<string, FragmentDefinitionNode>();
   for (const def of document.definitions) {
     if (def.kind === 'FragmentDefinition') {
-      fragmentMap.set(def.name.value, def.selectionSet);
+      fragmentMap.set(def.name.value, def);
     }
   }
 
@@ -178,9 +181,9 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
         const found = findPath(sel.selectionSet, path);
         if (found) return found;
       } else if (sel.kind === 'FragmentSpread') {
-        const fragSet = fragmentMap.get(sel.name.value);
-        if (fragSet) {
-          const found = findPath(fragSet, path);
+        const fragment = fragmentMap.get(sel.name.value);
+        if (fragment) {
+          const found = findPath(fragment.selectionSet, path);
           if (found) return found;
         }
       }
@@ -232,8 +235,46 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
     selectionSet: { kind: Kind.SELECTION_SET, selections: [inner] },
   };
 
+  // The fragments spread beneath the field come along, in document order,
+  // or the sub-query would refer to fragments it does not define.
+  const usedFragments = fragmentsUsedBy(inner, fragmentMap);
+  const subquery: DocumentNode = {
+    kind: Kind.DOCUMENT,
+    definitions: [
+      newOp,
+      ...document.definitions.filter(
+        (def) => def.kind === 'FragmentDefinition' && usedFragments.has(def.name.value)
+      ),
+    ],
+  };
+
   return {
-    text: print(newOp),
+    text: print(subquery),
     variableNames: variableDefinitions.map((vd) => vd.variable.name.value),
   };
+}
+
+/**
+ * Names of the fragments spread beneath a node, including the ones those
+ * fragments spread themselves.
+ */
+function fragmentsUsedBy(
+  root: ASTNode,
+  fragments: Map<string, FragmentDefinitionNode>
+): Set<string> {
+  const used = new Set<string>();
+  const scan = (node: ASTNode) => {
+    visit(node, {
+      FragmentSpread(spread) {
+        const name = spread.name.value;
+        const definition = fragments.get(name);
+        // `used` also stops fragments that spread each other from looping
+        if (!definition || used.has(name)) return;
+        used.add(name);
+        scan(definition);
+      },
+    });
+  };
+  scan(root);
+  return used;
 }

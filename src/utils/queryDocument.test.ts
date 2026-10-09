@@ -145,6 +145,40 @@ describe('sub-query of a line', () => {
     expect(subquery?.text).toContain('query Q($id: ID!) {');
   });
 
+  it('brings the definitions of the fragments it uses, and only those', () => {
+    const subquery = subqueryOf(
+      `
+        query Q { character { ...Names origin { name } } }
+        fragment Names on Character { name ...Status }
+        fragment Status on Character { status }
+        fragment Elsewhere on Location { dimension }
+      `,
+      'character'
+    );
+
+    expect(subquery?.text).toBe(
+      lines(
+        'query Q {',
+        '  character {',
+        '    ...Names',
+        '    origin {',
+        '      name',
+        '    }',
+        '  }',
+        '}',
+        '',
+        'fragment Names on Character {',
+        '  name',
+        '  ...Status',
+        '}',
+        '',
+        'fragment Status on Character {',
+        '  status',
+        '}'
+      )
+    );
+  });
+
   it('belongs to the operation that contains the line', () => {
     const subquery = subqueryOf(
       'query A { characters { name } } query B { characters { status } }',
@@ -181,6 +215,12 @@ describe('every sub-query of a valid query document is valid', () => {
       'query Q($id: ID!) { character(filter: {ids: [$id]}) { name } all: characters { status } }',
     ],
     ['two operations', 'query A { characters { name } } query B { characters { status } }'],
+    [
+      'named fragments, one using another',
+      `query Q { character { ...Names origin { name } } }
+       fragment Names on Character { name ...Status }
+       fragment Status on Character { status }`,
+    ],
   ])('%s', (_label, source) => {
     const doc = parseQueryDocument(source);
     expect(validate(schema, parse(doc.text)), 'the fixture itself').toEqual([]);
