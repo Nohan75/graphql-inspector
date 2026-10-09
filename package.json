@@ -1,0 +1,37 @@
+{
+  "name": "gql-network",
+  "version": "2.0.1",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nohan75/graphql-inspector.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nohan75/graphql-inspector/issues"
+  },
+  "homepage": "https://github.com/Nohan75/graphql-inspector#readme",
+  "description": "",
+  "dependencies": {
+    "graphql": "^16.13.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "wxt": "^0.20.20"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@wxt-dev/module-react": "^1.2.2",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.2"
+  }
+}

@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #1e1e1e;
+  --color-sidebar: #252526;
+  --color-toolbar: #2d2d2d;
+  --color-border: #3c3c3c;
+  --color-text: #cccccc;
+  --color-text-muted: #858585;
+  --color-accent: #0078d4;
+  --color-accent-hover: #106ebe;
+  --color-selected: #094771;
+  --color-hover: #2a2d2e;
+  --color-badge-query: #569cd6;
+  --color-badge-mutation: #ce9178;
+  --color-badge-subscription: #4ec9b0;
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-syn-keyword: #569cd6;
+  --color-syn-type: #4ec9b0;
+  --color-syn-field: #9cdcfe;
+  --color-syn-string: #ce9178;
+  --color-syn-brace: #ffd700;
+  --color-syn-comment: #6a9955;
+  --color-syn-number: #b5cea8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Reset default browser <mark> yellow background */
+mark { background: none; color: inherit; }
+
+/* Search highlights */
+.jt-search-match {
+  background-color: rgba(255, 200, 0, 0.3);
+  border-radius: 2px;
+}
+.jt-search-current {
+  background-color: rgba(255, 140, 0, 0.6);
+  border-radius: 2px;
+}
+
+/* JSON tree row search highlight backgrounds */
+.row-match-current { background-color: rgba(255, 140, 0, 0.15); }
+.row-match         { background-color: rgba(255, 200, 0, 0.08); }
+
+/* Code syntax highlight */
+.syn-keyword  { color: var(--color-syn-keyword); }
+.syn-type     { color: var(--color-syn-type); }
+.syn-field    { color: var(--color-syn-field); }
+.syn-string   { color: var(--color-syn-string); }
+.syn-brace    { color: var(--color-syn-brace); }
+.syn-comment  { color: var(--color-syn-comment); }
+.syn-variable { color: #c586c0; }
+
+/* Line numbers gutter */
+.line-gutter {
+  display: inline-block;
+  min-width: 2.5rem;
+  padding-right: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Query editor / JSON tree fold arrows */
+.fold-arrow {
+  display: inline-block;
+  width: 12px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+.fold-arrow:hover {
+  color: var(--color-text);
+}
+
+/* Monospace code typography (QueryEditor, JsonTree, RawTab) */
+.code-font {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+/*
+  Depth-based left padding for JSON tree rows.
+  JsonTree uses paddingLeft = depth * 16px.
+  Depths > 25 are capped at 25 (400px).
+*/
+@layer utilities {
+  .indent-0  { padding-left: 0px; }
+  .indent-1  { padding-left: 16px; }
+  .indent-2  { padding-left: 32px; }
+  .indent-3  { padding-left: 48px; }
+  .indent-4  { padding-left: 64px; }
+  .indent-5  { padding-left: 80px; }
+  .indent-6  { padding-left: 96px; }
+  .indent-7  { padding-left: 112px; }
+  .indent-8  { padding-left: 128px; }
+  .indent-9  { padding-left: 144px; }
+  .indent-10 { padding-left: 160px; }
+  .indent-11 { padding-left: 176px; }
+  .indent-12 { padding-left: 192px; }
+  .indent-13 { padding-left: 208px; }
+  .indent-14 { padding-left: 224px; }
+  .indent-15 { padding-left: 240px; }
+  .indent-16 { padding-left: 256px; }
+  .indent-17 { padding-left: 272px; }
+  .indent-18 { padding-left: 288px; }
+  .indent-19 { padding-left: 304px; }
+  .indent-20 { padding-left: 320px; }
+  .indent-21 { padding-left: 336px; }
+  .indent-22 { padding-left: 352px; }
+  .indent-23 { padding-left: 368px; }
+  .indent-24 { padding-left: 384px; }
+  .indent-25 { padding-left: 400px; }
+}
