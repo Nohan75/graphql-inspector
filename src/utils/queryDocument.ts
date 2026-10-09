@@ -7,6 +7,7 @@ import {
   type DocumentNode,
   type FieldNode,
   type FragmentDefinitionNode,
+  type FragmentSpreadNode,
   type InlineFragmentNode,
   type OperationDefinitionNode,
   type SelectionSetNode,
@@ -45,19 +46,19 @@ export interface QueryDocument {
 export function parseQueryDocument(source: string): QueryDocument {
   const text = normalise(source);
 
-  // Line numbers refer to `text`, so the tree is read from it rather than
-  // from the source. Parsed on first use: displaying a query needs neither
-  // of the two answers below.
-  let ast: DocumentNode | null | undefined;
-  const tree = (): DocumentNode | null => {
-    if (ast === undefined) {
+  // Line numbers refer to `text`, so the fields are read from it rather than
+  // from the source. Read on first use: displaying a query needs neither of
+  // the two answers below.
+  let fields: FieldIndex | null | undefined;
+  const index = (): FieldIndex | null => {
+    if (fields === undefined) {
       try {
-        ast = parse(text);
+        fields = indexFields(parse(text));
       } catch {
-        ast = null;
+        fields = null;
       }
     }
-    return ast;
+    return fields;
   };
 
   let fieldLines: ReadonlySet<number> | undefined;
@@ -65,21 +66,16 @@ export function parseQueryDocument(source: string): QueryDocument {
   return {
     text,
     get fieldLines() {
-      if (!fieldLines) {
-        const document = tree();
-        fieldLines = document ? collectFieldLines(document) : new Set<number>();
-      }
+      fieldLines ??= new Set(index()?.byLine.keys());
       return fieldLines;
     },
     subqueryAt(line) {
-      const document = tree();
-      return document ? extractSubquery(document, line) : null;
+      const found = index();
+      const location = found?.byLine.get(line);
+      return found && location ? buildSubquery(location, found) : null;
     },
   };
 }
-
-/** One selection on the way from an operation down to a field */
-type Step = FieldNode | InlineFragmentNode;
 
 function normalise(source: string): string {
   try {
@@ -106,116 +102,105 @@ function stripCommonIndent(query: string): string {
   return lines.map((l) => l.slice(minIndent)).join('\n');
 }
 
-function collectFieldLines(document: DocumentNode): Set<number> {
-  const lineNums = new Set<number>();
-  const fragMap = new Map<string, SelectionSetNode>();
-  for (const def of document.definitions) {
-    if (def.kind === 'FragmentDefinition') fragMap.set(def.name.value, def.selectionSet);
-  }
-  // A fragment is walked once: its lines are the same wherever it is spread,
-  // and fragments that spread each other would otherwise never end.
-  const walked = new Set<string>();
-  function collectLines(selectionSet: SelectionSetNode) {
-    for (const sel of selectionSet.selections) {
-      if (sel.kind === 'Field') {
-        if (sel.loc?.startToken.line) lineNums.add(sel.loc.startToken.line);
-        if (sel.selectionSet) collectLines(sel.selectionSet);
-      } else if (sel.kind === 'InlineFragment') {
-        collectLines(sel.selectionSet);
-      } else if (sel.kind === 'FragmentSpread') {
-        const name = sel.name.value;
-        const fragSet = fragMap.get(name);
-        if (fragSet && !walked.has(name)) {
-          walked.add(name);
-          collectLines(fragSet);
-        }
-      }
-    }
-  }
-  for (const def of document.definitions) {
-    if (def.kind === 'OperationDefinition') collectLines(def.selectionSet);
-  }
-  return lineNums;
+/** One selection on the way from an operation down to a field */
+type Step = FieldNode | InlineFragmentNode;
+
+/** Where a field sits in a query document */
+interface FieldLocation {
+  operation: OperationDefinitionNode;
+  /** From the root of the operation down to the field itself, which comes last */
+  path: Step[];
+}
+
+interface FieldIndex {
+  document: DocumentNode;
+  fragments: Map<string, FragmentDefinitionNode>;
+  /** Line of the document → the field that starts on it */
+  byLine: Map<number, FieldLocation>;
 }
 
 /**
- * Returns a minimal query that contains only the field on the given line, all
- * its children (if any), and all its ancestor fields up to the operation root.
- *
- * Example — clicking "lat" in:
- *   query Q { assets { location { lat lng } } }
- * returns:
- *   query Q { assets { location { lat } } }
+ * Walks the selections of every operation once and records where each field
+ * sits. This is the only walk of the selection tree: field lines and
+ * sub-queries are both read from its result.
  */
-function extractSubquery(document: DocumentNode, lineNumber: number): Subquery | null {
-  const operations = document.definitions.filter(
-    (d): d is OperationDefinitionNode => d.kind === 'OperationDefinition'
-  );
-  // Build a map of fragment name → definition for resolving FragmentSpreads
-  const fragmentMap = new Map<string, FragmentDefinitionNode>();
+function indexFields(document: DocumentNode): FieldIndex {
+  const fragments = new Map<string, FragmentDefinitionNode>();
   for (const def of document.definitions) {
-    if (def.kind === 'FragmentDefinition') {
-      fragmentMap.set(def.name.value, def);
-    }
+    if (def.kind === Kind.FRAGMENT_DEFINITION) fragments.set(def.name.value, def);
   }
 
-  // Depth-first search: return the path leading to the field on the target line.
-  // A fragment crossed on the way is part of the path: it carries the type
-  // condition without which the field may not exist on its parent. A named
-  // fragment joins the path as an inline fragment with the same condition,
-  // since the spread itself would bring every field of the fragment along.
-  // A fragment that did not hold the line once will not hold it later either,
-  // and fragments that spread each other would otherwise never end.
-  const searched = new Set<string>();
-  function findPath(
+  const byLine = new Map<number, FieldLocation>();
+  // A fragment is walked once, where it is first reached. A field inside a
+  // fragment therefore belongs to the first operation, in document order,
+  // that spreads it, and fragments that spread each other cannot loop.
+  const walked = new Set<string>();
+
+  function walk(
     selectionSet: SelectionSetNode,
+    operation: OperationDefinitionNode,
     path: Step[]
-  ): Step[] | null {
+  ) {
     for (const sel of selectionSet.selections) {
-      if (sel.kind === 'Field') {
+      if (sel.kind === Kind.FIELD) {
         const next = [...path, sel];
-        if (sel.loc?.startToken.line === lineNumber) return next;
-        if (sel.selectionSet) {
-          const found = findPath(sel.selectionSet, next);
-          if (found) return found;
+        const line = sel.loc?.startToken.line;
+        if (line !== undefined && !byLine.has(line)) {
+          byLine.set(line, { operation, path: next });
         }
-      } else if (sel.kind === 'InlineFragment') {
-        const found = findPath(sel.selectionSet, [...path, sel]);
-        if (found) return found;
-      } else if (sel.kind === 'FragmentSpread') {
+        if (sel.selectionSet) walk(sel.selectionSet, operation, next);
+      } else if (sel.kind === Kind.INLINE_FRAGMENT) {
+        walk(sel.selectionSet, operation, [...path, sel]);
+      } else {
         const name = sel.name.value;
-        const fragment = fragmentMap.get(name);
-        if (fragment && !searched.has(name)) {
-          searched.add(name);
-          const inline: InlineFragmentNode = {
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: fragment.typeCondition,
-            // the spread's own directives, e.g. @include, still apply
-            directives: sel.directives,
-            selectionSet: fragment.selectionSet,
-          };
-          const found = findPath(fragment.selectionSet, [...path, inline]);
-          if (found) return found;
-        }
+        const fragment = fragments.get(name);
+        if (!fragment || walked.has(name)) continue;
+        walked.add(name);
+        walk(fragment.selectionSet, operation, [...path, asInlineFragment(sel, fragment)]);
       }
     }
-    return null;
   }
 
-  // The field belongs to the first operation that reaches it. For a field in
-  // the body of an operation that is the operation itself; for a field inside
-  // a fragment it is the first operation, in document order, to spread it.
-  let operation: OperationDefinitionNode | undefined;
-  let path: Step[] | null = null;
-  for (const candidate of operations) {
-    path = findPath(candidate.selectionSet, []);
-    if (path) {
-      operation = candidate;
-      break;
-    }
+  for (const def of document.definitions) {
+    if (def.kind === Kind.OPERATION_DEFINITION) walk(def.selectionSet, def, []);
   }
-  if (!operation || !path || path.length === 0) return null;
 
+  return { document, fragments, byLine };
+}
+
+/**
+ * A fragment crossed on the way to a field is part of its path: it carries
+ * the type condition without which the field may not exist on its parent.
+ * A named fragment joins the path as an inline fragment with the same
+ * condition, since the spread itself would bring every field of the
+ * fragment along.
+ */
+function asInlineFragment(
+  spread: FragmentSpreadNode,
+  fragment: FragmentDefinitionNode
+): InlineFragmentNode {
+  return {
+    kind: Kind.INLINE_FRAGMENT,
+    typeCondition: fragment.typeCondition,
+    // the spread's own directives, e.g. @include, still apply
+    directives: spread.directives,
+    selectionSet: fragment.selectionSet,
+  };
+}
+
+/**
+ * Builds a minimal query that contains only the given field, all its children
+ * (if any), and all its ancestors up to the operation root.
+ *
+ * Example — the field "lat" in:
+ *   query Q { assets { location { lat lng } } }
+ * gives:
+ *   query Q { assets { location { lat } } }
+ */
+function buildSubquery(
+  { operation, path }: FieldLocation,
+  { document, fragments }: FieldIndex
+): Subquery {
   // Rebuild from leaf → root.
   // The leaf keeps its full selection set; each parent wraps only the child below it.
   let inner: Step = path[path.length - 1];
@@ -233,10 +218,10 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
 
   // The fragments spread beneath the field come along, in document order,
   // or the sub-query would refer to fragments it does not define.
-  const usedFragments = fragmentsUsedBy(inner, fragmentMap);
+  const usedFragments = fragmentsUsedBy(inner, fragments);
   const fragmentDefinitions = document.definitions.filter(
     (def): def is FragmentDefinitionNode =>
-      def.kind === 'FragmentDefinition' && usedFragments.has(def.name.value)
+      def.kind === Kind.FRAGMENT_DEFINITION && usedFragments.has(def.name.value)
   );
 
   // Keep only the definitions of the variables the sub-query uses, wherever
@@ -246,11 +231,10 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
   const variableDefinitions = (operation.variableDefinitions ?? []).filter((vd) =>
     usedVars.has(vd.variable.name.value)
   );
-  const newOp: OperationDefinitionNode = { ...reduced, variableDefinitions };
 
   const subquery: DocumentNode = {
     kind: Kind.DOCUMENT,
-    definitions: [newOp, ...fragmentDefinitions],
+    definitions: [{ ...reduced, variableDefinitions }, ...fragmentDefinitions],
   };
 
   return {
