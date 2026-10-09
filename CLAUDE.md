@@ -1,3 +1,7 @@
+## Navigation
+
+**Architecture**: the four extension contexts a captured request crosses, and what each folder holds, are in `README.md` under "Project structure". Read it before changing `src/entrypoints/` or `src/hooks/useRequests.ts`.
+
 ## Agent skills
 
 ### Issue tracker
