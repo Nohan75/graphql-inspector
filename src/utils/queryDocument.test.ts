@@ -145,6 +145,31 @@ describe('sub-query of a line', () => {
     expect(subquery?.text).toContain('query Q($id: ID!) {');
   });
 
+  it('declares a variable wherever it is used', () => {
+    const subquery = subqueryOf(
+      `
+        query Q($id: ID!, $ttl: Int, $withOrigin: Boolean!, $first: Int, $deep: Int, $unused: Int)
+        @cached(ttl: $ttl) {
+          character(id: $id) {
+            name
+            origin @include(if: $withOrigin) { name }
+            ... on Character { episode(first: $first) { name } }
+            ...Episodes
+          }
+        }
+        fragment Episodes on Character { more: episode(first: $deep) { name } }
+      `,
+      'character'
+    );
+
+    // on the operation, in an argument, in a directive, in an inline
+    // fragment and in a fragment; $unused is used nowhere
+    expect(subquery?.variableNames).toEqual(['id', 'ttl', 'withOrigin', 'first', 'deep']);
+    expect(subquery?.text).toContain(
+      'query Q($id: ID!, $ttl: Int, $withOrigin: Boolean!, $first: Int, $deep: Int) @cached(ttl: $ttl) {'
+    );
+  });
+
   it('brings the definitions of the fragments it uses, and only those', () => {
     const subquery = subqueryOf(
       `
@@ -220,6 +245,18 @@ describe('every sub-query of a valid query document is valid', () => {
       `query Q { character { ...Names origin { name } } }
        fragment Names on Character { name ...Status }
        fragment Status on Character { status }`,
+    ],
+    [
+      'variables in a directive, an inline fragment and a fragment',
+      `query Q($id: ID!, $withOrigin: Boolean!, $first: Int, $deep: Int) {
+         character(id: $id) {
+           name
+           origin @include(if: $withOrigin) { name }
+           ... on Character { episode(first: $first) { name } }
+           ...Episodes
+         }
+       }
+       fragment Episodes on Character { more: episode(first: $deep) { name } }`,
     ],
   ])('%s', (_label, source) => {
     const doc = parseQueryDocument(source);

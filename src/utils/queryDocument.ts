@@ -9,7 +9,6 @@ import {
   type FragmentDefinitionNode,
   type OperationDefinitionNode,
   type SelectionSetNode,
-  type ValueNode,
 } from 'graphql';
 
 /** A query document reduced to a single field of another one */
@@ -204,54 +203,52 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
     };
   }
 
-  // Collect variable names referenced in the extracted subtree so we only
-  // keep the variableDefinitions that are actually used. Spreading ...operation
-  // would carry over all original variables, causing GraphQL validation errors
-  // like "Variable '$x' is never used" for variables not in this sub-query.
-  const usedVars = new Set<string>();
-  function collectVars(field: FieldNode) {
-    function visitValue(v: ValueNode) {
-      if (v.kind === 'Variable') {
-        usedVars.add(v.name.value);
-      } else if (v.kind === 'ListValue') {
-        v.values.forEach(visitValue);
-      } else if (v.kind === 'ObjectValue') {
-        v.fields.forEach((f) => visitValue(f.value));
-      }
-    }
-    field.arguments?.forEach((arg) => visitValue(arg.value));
-    field.selectionSet?.selections.forEach((sel) => {
-      if (sel.kind === 'Field') collectVars(sel);
-    });
-  }
-  collectVars(inner);
-
-  const variableDefinitions = (operation.variableDefinitions ?? []).filter((vd) =>
-    usedVars.has(vd.variable.name.value)
-  );
-  const newOp: OperationDefinitionNode = {
+  const reduced: OperationDefinitionNode = {
     ...operation,
-    variableDefinitions,
     selectionSet: { kind: Kind.SELECTION_SET, selections: [inner] },
   };
 
   // The fragments spread beneath the field come along, in document order,
   // or the sub-query would refer to fragments it does not define.
   const usedFragments = fragmentsUsedBy(inner, fragmentMap);
+  const fragmentDefinitions = document.definitions.filter(
+    (def): def is FragmentDefinitionNode =>
+      def.kind === 'FragmentDefinition' && usedFragments.has(def.name.value)
+  );
+
+  // Keep only the definitions of the variables the sub-query uses, wherever
+  // that is: an argument, a directive, an inline fragment or a fragment.
+  // Keeping them all would fail validation with "Variable '$x' is never used".
+  const usedVars = variablesUsedBy([reduced, ...fragmentDefinitions]);
+  const variableDefinitions = (operation.variableDefinitions ?? []).filter((vd) =>
+    usedVars.has(vd.variable.name.value)
+  );
+  const newOp: OperationDefinitionNode = { ...reduced, variableDefinitions };
+
   const subquery: DocumentNode = {
     kind: Kind.DOCUMENT,
-    definitions: [
-      newOp,
-      ...document.definitions.filter(
-        (def) => def.kind === 'FragmentDefinition' && usedFragments.has(def.name.value)
-      ),
-    ],
+    definitions: [newOp, ...fragmentDefinitions],
   };
 
   return {
     text: print(subquery),
     variableNames: variableDefinitions.map((vd) => vd.variable.name.value),
   };
+}
+
+/** Names of the variables used anywhere in the given definitions */
+function variablesUsedBy(definitions: readonly ASTNode[]): Set<string> {
+  const used = new Set<string>();
+  for (const definition of definitions) {
+    visit(definition, {
+      // A definition declares a variable, it does not use it
+      VariableDefinition: () => false,
+      Variable(variable) {
+        used.add(variable.name.value);
+      },
+    });
+  }
+  return used;
 }
 
 /**
