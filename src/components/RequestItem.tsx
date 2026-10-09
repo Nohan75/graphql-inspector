@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import type { GQLRequest } from '../types';
 import { buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
 import type { SandboxFormat } from '../types';
-import { parse, print } from 'graphql';
-import { stripCommonIndent } from '../utils/graphql';
+import { parseQueryDocument } from '../utils/queryDocument';
 
 interface RequestItemProps {
   request: GQLRequest;
@@ -49,12 +48,7 @@ export function RequestItem({
       setTimeout(() => setSandboxError(false), 3000);
       return;
     }
-    let normalizedQuery: string;
-    try {
-      normalizedQuery = print(parse(request.query));
-    } catch {
-      normalizedQuery = stripCommonIndent(request.query.trim());
-    }
+    const normalizedQuery = parseQueryDocument(request.query).text;
     const isAutoApollo = sandboxUrl.includes('apollographql') || sandboxUrl.includes('apollo.dev');
     let url: string;
     if (sandboxFormat === 'apollo' || (sandboxFormat === 'auto' && isAutoApollo)) {

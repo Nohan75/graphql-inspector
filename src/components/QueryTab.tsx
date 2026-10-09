@@ -3,9 +3,8 @@ import type { GQLRequest } from '../types';
 import { QueryEditor } from './QueryEditor';
 import { JsonTree } from './JsonTree';
 import { useSettings } from '../hooks/useSettings';
-import { stripCommonIndent } from '../utils/graphql';
+import { parseQueryDocument, type Subquery } from '../utils/queryDocument';
 import { validateSandboxUrl, buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
-import { parse, print } from 'graphql';
 
 interface QueryTabProps {
   request: GQLRequest;
@@ -44,14 +43,10 @@ export function QueryTab({ request }: QueryTabProps) {
   const [showVariables, setShowVariables] = useState(true);
   const { settings } = useSettings();
 
-  const normalizedQuery = useMemo(() => {
-    try {
-      return print(parse(request.query));
-    } catch {
-      // Fallback: strip common indentation when graphql parse fails
-      return stripCommonIndent(request.query.trim());
-    }
-  }, [request.query]);
+  const normalizedQuery = useMemo(
+    () => parseQueryDocument(request.query).text,
+    [request.query]
+  );
 
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
@@ -72,9 +67,9 @@ export function QueryTab({ request }: QueryTabProps) {
     openInSandbox(buildSandboxUrl(normalizedQuery));
   };
 
-  const handleOpenLine = (subquery: string) => {
+  const handleOpenLine = (subquery: Subquery) => {
     if (!sandboxReady) return;
-    openInSandbox(buildSandboxUrl(subquery));
+    openInSandbox(buildSandboxUrl(subquery.text));
   };
 
   return (
