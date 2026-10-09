@@ -157,7 +157,7 @@ A captured request can be reopened in a GraphQL sandbox (Apollo Sandbox by defau
 
 - the `↗` button on each row of the list;
 - the **Open in Sandbox ↗** button in the **Request** tab;
-- the `↗` button that appears when you hover a field in the query. It opens a sub-query reduced to that field, its sub-fields and its parents, keeping only the variable definitions that are actually used. This helps isolate the failing field of a large query.
+- the `↗` button that appears when you hover a field in the query. It opens a sub-query reduced to that field, its sub-fields and its parents. The sub-query brings the fragments it uses, declares only the variables it uses, and only the values of those variables are sent. This helps isolate the failing field of a large query.
 
 ### Compare mode
 
@@ -186,7 +186,7 @@ The `⚙` button opens the sandbox settings, which are stored in `chrome.storage
 
 - Interception is off by default. It is only active in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
 - Values of sensitive headers (`Authorization`, `Cookie`, `X-API-Key`, CSRF tokens…) are redacted when captured in the page; only the header name is kept. When the DevTools network API provides the real headers, those are shown instead; they do not leave DevTools.
-- Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL.
+- Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL. The per-field `↗` button only passes the variables its sub-query uses.
 
 ## Known limits
 
