@@ -81,6 +81,19 @@ describe('field lines of a query document', () => {
 
     expect(doc.fieldLines.size).toBe(0);
   });
+
+  it('are found even when fragments spread each other', () => {
+    // An invalid document, but a page can still send it
+    const doc = parseQueryDocument(`
+      query Q { character { ...A } }
+      fragment A on Character { name ...B }
+      fragment B on Character { status ...A }
+    `);
+
+    // character on line 2, name on line 8, status on line 13
+    expect([...doc.fieldLines].sort((a, b) => a - b)).toEqual([2, 8, 13]);
+    expect(doc.subqueryAt(99)).toBeNull();
+  });
 });
 
 describe('sub-query of a line', () => {

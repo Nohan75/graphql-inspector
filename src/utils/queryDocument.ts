@@ -112,6 +112,9 @@ function collectFieldLines(document: DocumentNode): Set<number> {
   for (const def of document.definitions) {
     if (def.kind === 'FragmentDefinition') fragMap.set(def.name.value, def.selectionSet);
   }
+  // A fragment is walked once: its lines are the same wherever it is spread,
+  // and fragments that spread each other would otherwise never end.
+  const walked = new Set<string>();
   function collectLines(selectionSet: SelectionSetNode) {
     for (const sel of selectionSet.selections) {
       if (sel.kind === 'Field') {
@@ -120,8 +123,12 @@ function collectFieldLines(document: DocumentNode): Set<number> {
       } else if (sel.kind === 'InlineFragment') {
         collectLines(sel.selectionSet);
       } else if (sel.kind === 'FragmentSpread') {
-        const fragSet = fragMap.get(sel.name.value);
-        if (fragSet) collectLines(fragSet);
+        const name = sel.name.value;
+        const fragSet = fragMap.get(name);
+        if (fragSet && !walked.has(name)) {
+          walked.add(name);
+          collectLines(fragSet);
+        }
       }
     }
   }
@@ -157,6 +164,9 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
   // condition without which the field may not exist on its parent. A named
   // fragment joins the path as an inline fragment with the same condition,
   // since the spread itself would bring every field of the fragment along.
+  // A fragment that did not hold the line once will not hold it later either,
+  // and fragments that spread each other would otherwise never end.
+  const searched = new Set<string>();
   function findPath(
     selectionSet: SelectionSetNode,
     path: Step[]
@@ -173,8 +183,10 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
         const found = findPath(sel.selectionSet, [...path, sel]);
         if (found) return found;
       } else if (sel.kind === 'FragmentSpread') {
-        const fragment = fragmentMap.get(sel.name.value);
-        if (fragment) {
+        const name = sel.name.value;
+        const fragment = fragmentMap.get(name);
+        if (fragment && !searched.has(name)) {
+          searched.add(name);
           const inline: InlineFragmentNode = {
             kind: Kind.INLINE_FRAGMENT,
             typeCondition: fragment.typeCondition,
