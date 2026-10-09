@@ -20,6 +20,7 @@ The rule is in `CLAUDE.md`, under "Language", so that it is seen while writing. 
 
 - A change to what the user sees or to what leaves the browser updates `README.md` in the same pull request: "Features", "Privacy" and "Known limits".
 - A domain concept is named with its term from `GLOSSARY.md`. A new concept adds its term there.
+- Skills follow too; the rule is in `CLAUDE.md`, under "Skills". At review, a skill in `.claude/skills/` left stating something the diff made false is a finding.
 
 ## Pull requests
 
