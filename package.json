@@ -8,7 +8,8 @@
     "zip": "wxt zip",
     "test": "vitest run",
     "typecheck": "wxt prepare && tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "panel": "vite --config preview/vite.config.mts"
   },
   "repository": {
     "type": "git",
@@ -40,6 +41,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.71.1",
+    "vite": "8.0.5",
     "vitest": "^5.0.3"
   }
 }
