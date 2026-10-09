@@ -1,0 +1,100 @@
+name: Release zip
+
+# Publishes the downloadable extension archive, one release per version.
+#
+#   push to wxt-react     -> build the zip; if the manifest version has no
+#                            release yet, create one with the zip attached
+#   pull request          -> build the zip only, as a check; nothing is published
+#
+# The release tag is v<version>, where <version> is the `version` of
+# package.json, which WXT copies into the built manifest. The tag is created on
+# the pushed wxt-react commit. A push that leaves the version unchanged
+# publishes nothing: run `npm version patch` (or minor, major) to release.
+
+on:
+  push:
+    branches: [wxt-react]
+  pull_request:
+    branches: [wxt-react]
+
+permissions:
+  contents: read
+
+# Pushes are queued rather than cancelled, so a release is never interrupted.
+# A superseded pull request run is simply cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run zip
+
+      - name: Read the version from the built manifest
+        id: meta
+        run: |
+          version=$(node -p "require('./.output/chrome-mv3/manifest.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension-zip
+          path: .output/*-chrome.zip
+          # .output is a dot-directory, which the action skips by default
+          include-hidden-files: true
+          if-no-files-found: error
+
+  # Separate job so the write token is never exposed to `npm ci`, which runs
+  # third-party install scripts.
+  publish:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: v${{ needs.build.outputs.version }}
+    steps:
+      - name: Check whether this version is already released
+        id: check
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists, nothing to publish. Bump the version in package.json (npm version patch) to release."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif gh api "repos/$GH_REPO/git/ref/tags/$TAG" > /dev/null 2>&1; then
+            # `gh release create` would reuse that tag wherever it points,
+            # instead of tagging the commit that was just built.
+            echo "::error::Tag $TAG already exists without a release. Delete the tag or pick another version."
+            exit 1
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v8
+        if: steps.check.outputs.publish == 'true'
+        with:
+          name: extension-zip
+          path: dist
+
+      - name: Create the release, tagged on the pushed commit
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          gh release create "$TAG" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes
