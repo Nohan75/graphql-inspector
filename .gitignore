@@ -2,3 +2,7 @@ node_modules/
 .output/
 .wxt/
 dist/
+
+# Local agent state: other checkouts of this repo and per-machine settings
+.claude/worktrees/
+.claude/settings.local.json
