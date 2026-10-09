@@ -144,19 +144,6 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
   const operations = document.definitions.filter(
     (d): d is OperationDefinitionNode => d.kind === 'OperationDefinition'
   );
-  const operation =
-    operations.find((op) => {
-      const startLine = op.loc?.startToken.line;
-      const endLine = op.loc?.endToken.line;
-      return (
-        startLine !== undefined &&
-        endLine !== undefined &&
-        startLine <= lineNumber &&
-        lineNumber <= endLine
-      );
-    }) ?? operations[0];
-  if (!operation) return null;
-
   // Build a map of fragment name → definition for resolving FragmentSpreads
   const fragmentMap = new Map<string, FragmentDefinitionNode>();
   for (const def of document.definitions) {
@@ -203,8 +190,19 @@ function extractSubquery(document: DocumentNode, lineNumber: number): Subquery |
     return null;
   }
 
-  const path = findPath(operation.selectionSet, []);
-  if (!path || path.length === 0) return null;
+  // The field belongs to the first operation that reaches it. For a field in
+  // the body of an operation that is the operation itself; for a field inside
+  // a fragment it is the first operation, in document order, to spread it.
+  let operation: OperationDefinitionNode | undefined;
+  let path: Step[] | null = null;
+  for (const candidate of operations) {
+    path = findPath(candidate.selectionSet, []);
+    if (path) {
+      operation = candidate;
+      break;
+    }
+  }
+  if (!operation || !path || path.length === 0) return null;
 
   // Rebuild from leaf → root.
   // The leaf keeps its full selection set; each parent wraps only the child below it.

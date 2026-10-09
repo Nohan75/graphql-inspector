@@ -280,6 +280,30 @@ describe('sub-query of a line', () => {
     expect(subquery?.text).toBe(lines('query B {', '  characters {', '    status', '  }', '}'));
   });
 
+  it('for a field inside a fragment, belongs to the first operation that reaches that fragment', () => {
+    const subquery = subqueryOf(
+      `
+        query A { characters { name } }
+        query B($t: String!) { search(text: $t) { ...Place } }
+        query C($t: String!) { search(text: $t) { ...Place } }
+        fragment Place on Location { dimension }
+      `,
+      'dimension'
+    );
+
+    expect(subquery?.text).toBe(
+      lines(
+        'query B($t: String!) {',
+        '  search(text: $t) {',
+        '    ... on Location {',
+        '      dimension',
+        '    }',
+        '  }',
+        '}'
+      )
+    );
+  });
+
   it('is null for a line that carries no field', () => {
     const doc = parseQueryDocument('query Q { character { name } }');
 
