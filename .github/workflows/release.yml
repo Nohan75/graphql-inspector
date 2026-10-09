@@ -2,20 +2,20 @@ name: Release zip
 
 # Publishes the downloadable extension archive, one release per version.
 #
-#   push to wxt-react     -> build the zip; if the manifest version has no
+#   push to main          -> build the zip; if the manifest version has no
 #                            release yet, create one with the zip attached
 #   pull request          -> build the zip only, as a check; nothing is published
 #
 # The release tag is v<version>, where <version> is the `version` of
 # package.json, which WXT copies into the built manifest. The tag is created on
-# the pushed wxt-react commit. A push that leaves the version unchanged
+# the pushed main commit. A push that leaves the version unchanged
 # publishes nothing: run `npm version patch` (or minor, major) to release.
 
 on:
   push:
-    branches: [wxt-react]
+    branches: [main]
   pull_request:
-    branches: [wxt-react]
+    branches: [main]
 
 permissions:
   contents: read
