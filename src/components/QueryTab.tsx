@@ -50,26 +50,32 @@ export function QueryTab({ request }: QueryTabProps) {
 
   const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
 
-  function buildSandboxUrl(query: string): string {
+  function buildSandboxUrl(query: string, variables: Record<string, unknown> | null): string {
     const fmt = settings.sandboxFormat ?? 'auto';
     const isAutoApollo = settings.sandboxUrl.includes('apollographql') || settings.sandboxUrl.includes('apollo.dev');
     if (fmt === 'apollo' || (fmt === 'auto' && isAutoApollo)) {
-      return buildApolloSandboxUrl(settings.sandboxUrl, query, request.variables, request.url);
+      return buildApolloSandboxUrl(settings.sandboxUrl, query, variables, request.url);
     } else if (fmt === 'apollo-no-endpoint') {
-      return buildApolloPlaygroundUrl(settings.sandboxUrl, query, request.variables);
+      return buildApolloPlaygroundUrl(settings.sandboxUrl, query, variables);
     } else {
-      return buildGraphiQLUrl(settings.sandboxUrl, query, request.variables);
+      return buildGraphiQLUrl(settings.sandboxUrl, query, variables);
     }
   }
 
   const handleOpenSandbox = () => {
     if (!sandboxReady) return;
-    openInSandbox(buildSandboxUrl(normalizedQuery));
+    openInSandbox(buildSandboxUrl(normalizedQuery, request.variables));
   };
 
   const handleOpenLine = (subquery: Subquery) => {
     if (!sandboxReady) return;
-    openInSandbox(buildSandboxUrl(subquery.text));
+    // Only the values the sub-query declares: the others would be noise in the
+    // sandbox, and have no reason to travel in its URL.
+    const used = Object.entries(request.variables ?? {}).filter(([name]) =>
+      subquery.variableNames.includes(name)
+    );
+    const variables = used.length > 0 ? Object.fromEntries(used) : null;
+    openInSandbox(buildSandboxUrl(subquery.text, variables));
   };
 
   return (
