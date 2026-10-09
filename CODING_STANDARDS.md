@@ -4,7 +4,7 @@ Read at review. These are the judgement calls a reviewer makes on a diff. Anythi
 
 ## Language
 
-Everything committed is in English: code, comments, interface labels, documentation, commit messages, pull requests and issues. The language of the conversation that produced the change does not carry over.
+The rule is in `CLAUDE.md`, under "Language", so that it is seen while writing. At review, text in another language anywhere in the diff or in the pull request is a finding.
 
 ## Where logic lives
 
