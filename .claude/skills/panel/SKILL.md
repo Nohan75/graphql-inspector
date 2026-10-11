@@ -33,6 +33,7 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
 `?type=<text>` replaces the text of the field that has the focus. Clicks and typing run in the order they appear in the URL.
 
 - `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save`: saves another sandbox URL. The settings modal gives the focus to its **Sandbox URL** field when it opens.
+- `?click=Filter%20requests%E2%80%A6&type=Character`: filters the list. A click on a field gives it the focus; a field is matched by its placeholder.
 
 ## What a screenshot hides
 
