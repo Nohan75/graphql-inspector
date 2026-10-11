@@ -249,9 +249,8 @@ export function createRequestLog(): RequestLog {
       if (finished.method !== 'POST') return null;
 
       const waiting = pending.get(finished.url) ?? [];
-      const body = finished.postData ? parseGraphQLBody(finished.postData) : null;
 
-      if (!body) {
+      if (!finished.postData) {
         // Without a request body there is no operation to match on. The
         // oldest pending request of the URL is taken for it: it already
         // carries the query captured when it left. With nothing pending,
@@ -259,7 +258,11 @@ export function createRequestLog(): RequestLog {
         const oldest = waiting[0];
         return oldest ? completeFromNetwork(oldest, finished, now) : null;
       }
-      if (body.query.length > MAX_QUERY_LENGTH) return null;
+
+      // A request body that is there and is not GraphQL is another request
+      // sent to the same URL: it completes nothing.
+      const body = parseGraphQLBody(finished.postData);
+      if (!body || body.query.length > MAX_QUERY_LENGTH) return null;
 
       // With an operation in hand, never fall back to the oldest: that would
       // pair one operation's query with another's response.

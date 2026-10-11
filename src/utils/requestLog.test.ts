@@ -381,6 +381,16 @@ describe('a finished request DevTools reports', () => {
 
     expect(log.requests).toEqual([]);
   });
+
+  it('is ignored when its request body is not a GraphQL request, whatever is pending on its URL', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+
+    const id = log.networkFinished(finished('', { postData: '{"name":"Ada"}', status: 201 }), 100);
+
+    expect(states(log)).toEqual(['Viewer: pending']);
+    expect(id).toBeNull();
+  });
 });
 
 describe('the response body DevTools gives', () => {
