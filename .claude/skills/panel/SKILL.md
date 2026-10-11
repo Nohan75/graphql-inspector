@@ -25,6 +25,7 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
 
 - `?click=Response`: the Response tab.
 - `?click=Broken`: the request named Broken in the list.
+- `?click=Mutations&click=Errors`: the list narrowed to the mutations that went wrong. The type filters answer to their tooltip, `Queries`, `Mutations`, `Subscriptions`; `Errors` and `Pending` to their text.
 - `?click=Open%20this%20field%20in%20sandbox%233`: the per-field button of the third field.
 - `?click=Add%20to%20compare%232&click=Add%20to%20compare%232`: rows 2 and 3 in compare mode. A row leaves the matches once selected, so the second `#2` is the next row.
 

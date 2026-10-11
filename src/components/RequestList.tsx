@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import type { GQLRequest, Settings } from '../types';
 import { RequestItem } from './RequestItem';
+import { filterRequests, type RequestFilter } from '../utils/requestFilter';
 
 interface RequestListProps {
   requests: GQLRequest[];
   selectedId: number | null;
-  filterText: string;
+  filter: RequestFilter;
   settings: Settings;
   compareIds: number[];
   onSelect: (id: number) => void;
@@ -15,7 +16,7 @@ interface RequestListProps {
 export function RequestList({
   requests,
   selectedId,
-  filterText,
+  filter,
   settings,
   compareIds,
   onSelect,
@@ -32,13 +33,7 @@ export function RequestList({
     prevLengthRef.current = requests.length;
   }, [requests.length]);
 
-  const filtered = filterText
-    ? requests.filter(
-        (r) =>
-          r.operationName.toLowerCase().includes(filterText.toLowerCase()) ||
-          r.url.toLowerCase().includes(filterText.toLowerCase())
-      )
-    : requests;
+  const filtered = filterRequests(requests, filter);
 
   if (filtered.length === 0) {
     return (
