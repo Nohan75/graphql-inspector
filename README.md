@@ -187,7 +187,7 @@ The `⊕` button on a row adds that request to the comparison. The first one sel
 
 The `⚙` button opens the sandbox settings, which are stored in `chrome.storage.local`:
 
-- **Sandbox URL**: the address of the sandbox, in `http://` or `https://`. Default: `https://studio.apollographql.com/sandbox/explorer`.
+- **Sandbox URL**: the address of the sandbox, in `http://` or `https://`. Default: `https://studio.apollographql.com/sandbox/explorer`. It can carry parameters of its own and a fragment: the query is added after the former and before the latter.
 - **URL Format**: how the query is passed in the URL.
 
 | Format | Generated parameters | Use case |
