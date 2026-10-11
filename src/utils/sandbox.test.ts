@@ -168,6 +168,49 @@ describe('opening one field of a captured request', () => {
   });
 });
 
+describe('a sandbox URL that already carries something', () => {
+  const bare = { ...request, variables: null };
+
+  it('gets the parameters after its own, joined with &', () => {
+    openInSandbox(settings('graphiql', 'https://sandbox.test/explorer?theme=dark'), bare);
+
+    expect(openedUrl()).toBe(`https://sandbox.test/explorer?theme=dark&query=${DOCUMENT}`);
+  });
+
+  it.each([
+    ['https://sandbox.test/explorer?', 'https://sandbox.test/explorer?'],
+    ['https://sandbox.test/explorer?theme=dark&', 'https://sandbox.test/explorer?theme=dark&'],
+  ])('gets them straight after a query string left open, as in %s', (sandboxUrl, start) => {
+    openInSandbox(settings('graphiql', sandboxUrl), bare);
+
+    expect(openedUrl()).toBe(`${start}query=${DOCUMENT}`);
+  });
+
+  it('keeps its fragment, after the parameters', () => {
+    openInSandbox(settings('graphiql', 'https://sandbox.test/explorer#/tab'), bare);
+
+    expect(openedUrl()).toBe(`https://sandbox.test/explorer?query=${DOCUMENT}#/tab`);
+  });
+
+  it('does not take a ? of its fragment for a query string', () => {
+    openInSandbox(settings('graphiql', 'https://sandbox.test/explorer#/tab?panel=docs'), bare);
+
+    expect(openedUrl()).toBe(`https://sandbox.test/explorer?query=${DOCUMENT}#/tab?panel=docs`);
+  });
+
+  it('is read by the sandbox with its own parameters, the query and its fragment', () => {
+    openInSandbox(settings('graphiql', 'https://sandbox.test/explorer?theme=dark#/tab'), request);
+
+    const opened = new URL(tabs[0].url);
+    expect(Object.fromEntries(opened.searchParams)).toEqual({
+      theme: 'dark',
+      query: DOCUMENT,
+      variables: VARIABLES,
+    });
+    expect(opened.hash).toBe('#/tab');
+  });
+});
+
 describe('a sandbox URL that is not valid', () => {
   it.each(['', 'sandbox.test/explorer', 'javascript:alert(1)', 'file:///etc/hosts'])(
     'opens nothing for "%s" and says so',

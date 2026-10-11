@@ -93,8 +93,22 @@ export function openInSandbox(
     .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
     .join('&');
 
-  chrome.tabs.create({ url: `${sandboxUrl}?${search}`, active: true });
+  chrome.tabs.create({ url: withSearch(sandboxUrl, search), active: true });
   return true;
+}
+
+/**
+ * Adds parameters to a URL that may carry some already, and a fragment:
+ * after its own parameters, and before its fragment.
+ */
+function withSearch(url: string, search: string): string {
+  const fragmentAt = url.indexOf('#');
+  const base = fragmentAt < 0 ? url : url.slice(0, fragmentAt);
+  const fragment = fragmentAt < 0 ? '' : url.slice(fragmentAt);
+
+  // A `?` in the fragment is not a query string: only the part before counts
+  const joint = !base.includes('?') ? '?' : /[?&]$/.test(base) ? '' : '&';
+  return `${base}${joint}${search}${fragment}`;
 }
 
 function formatFor(sandboxUrl: string, format: SandboxFormat): Format {
