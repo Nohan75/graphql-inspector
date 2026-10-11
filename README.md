@@ -112,6 +112,7 @@ Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The te
 - The sample requests are in `preview/fixtures.ts`.
 - A sandbox would open in a new tab; the preview prints its URL under the panel instead.
 - `?click=` parameters replay clicks in order, to reach a given state from the address bar. For example, `?click=Response` opens the Response tab, and `?click=Add%20to%20compare%232&click=Add%20to%20compare%232` puts the second and third requests in compare mode.
+- `?type=` parameters replace the text of the field that has the focus, in the same sequence as the clicks. For example, `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save` saves another sandbox URL.
 
 The preview does not capture anything. To exercise the capture itself, load the extension in a browser.
 

@@ -8,7 +8,7 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
 ## Steps
 
 1. **Start the preview.** Run `npm run panel` in the background. Done when `http://localhost:5183/` answers 200.
-2. **Reach the state to check.** Add one `?click=` parameter per click, in order (syntax below). Done when the URL leads to the state the change affects.
+2. **Reach the state to check.** Add one `?click=` parameter per click and one `?type=` parameter per text to type, in order (syntax below). Done when the URL leads to the state the change affects.
 3. **Capture it** with headless Chrome, as a screenshot, a DOM dump, or both:
 
    ```bash
@@ -16,7 +16,7 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
    chrome --headless=new --virtual-time-budget=8000 --dump-dom "<url>" > <file.html>
    ```
 
-   Done when the capture shows the change, and `data-preview-ready="true"` is on `<html>`: every click has been replayed.
+   Done when the capture shows the change, and `data-preview-ready="true"` is on `<html>`: every step has been replayed.
 4. **Stop the preview.** Kill the process listening on port 5183. Stopping the `npm run panel` task leaves that process running, and the port is fixed, so the next start fails until it is gone.
 
 ## Clicks
@@ -27,6 +27,12 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
 - `?click=Broken`: the request named Broken in the list.
 - `?click=Open%20this%20field%20in%20sandbox%233`: the per-field button of the third field.
 - `?click=Add%20to%20compare%232&click=Add%20to%20compare%232`: rows 2 and 3 in compare mode. A row leaves the matches once selected, so the second `#2` is the next row.
+
+## Typing
+
+`?type=<text>` replaces the text of the field that has the focus. Clicks and typing run in the order they appear in the URL.
+
+- `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save`: saves another sandbox URL. The settings modal gives the focus to its **Sandbox URL** field when it opens.
 
 ## What a screenshot hides
 
