@@ -11,7 +11,9 @@
     "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint .",
     "check": "npm run typecheck && npm run lint && npm test && npm run build:check",
-    "panel": "vite --config preview/vite.config.mts"
+    "panel": "vite --config preview/vite.config.mts",
+    "panel:dump": "node preview/cli.mjs dump",
+    "panel:shot": "node preview/cli.mjs shot"
   },
   "repository": {
     "type": "git",

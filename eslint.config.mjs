@@ -40,6 +40,13 @@ export default defineConfig(
     },
   },
   {
+    // The command line of the preview runs in Node, outside the extension
+    files: ['preview/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', fetch: 'readonly', process: 'readonly', setTimeout: 'readonly' },
+    },
+  },
+  {
     // WXT builds every script placed directly in src/entrypoints as an entry
     // point: a test left there would be shipped with the extension.
     files: ['src/entrypoints/*.test.*', 'src/entrypoints/*.spec.*'],

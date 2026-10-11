@@ -172,6 +172,7 @@ export function JsonTree({
               if (el) rowRefs.current.set(node.key, el);
               else rowRefs.current.delete(node.key);
             }}
+            aria-current={isCurrentMatch && searchTerm ? 'true' : undefined}
             className={`flex items-baseline ${
               isCurrentMatch && searchTerm
                 ? 'row-match-current'

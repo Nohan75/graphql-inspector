@@ -38,10 +38,12 @@ export function DetailPanel({ request }: DetailPanelProps) {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-bg">
       {/* Tab bar */}
-      <div className="flex border-b border-border bg-toolbar shrink-0">
+      <div role="tablist" className="flex border-b border-border bg-toolbar shrink-0">
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`bg-transparent border-0 border-b-2 px-[14px] py-[7px] text-xs cursor-pointer transition-colors
               ${activeTab === tab.id
