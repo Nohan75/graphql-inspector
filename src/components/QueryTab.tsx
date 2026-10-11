@@ -4,7 +4,7 @@ import { QueryEditor } from './QueryEditor';
 import { JsonTree } from './JsonTree';
 import { useSettings } from '../hooks/useSettings';
 import { parseQueryDocument, type Subquery } from '../utils/queryDocument';
-import { validateSandboxUrl, buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox } from '../utils/sandbox';
+import { validateSandboxUrl, openInSandbox } from '../utils/sandbox';
 
 interface QueryTabProps {
   request: GQLRequest;
@@ -48,34 +48,14 @@ export function QueryTab({ request }: QueryTabProps) {
     [request.query]
   );
 
-  const sandboxReady = !!settings.sandboxUrl && validateSandboxUrl(settings.sandboxUrl);
-
-  function buildSandboxUrl(query: string, variables: Record<string, unknown> | null): string {
-    const fmt = settings.sandboxFormat ?? 'auto';
-    const isAutoApollo = settings.sandboxUrl.includes('apollographql') || settings.sandboxUrl.includes('apollo.dev');
-    if (fmt === 'apollo' || (fmt === 'auto' && isAutoApollo)) {
-      return buildApolloSandboxUrl(settings.sandboxUrl, query, variables, request.url);
-    } else if (fmt === 'apollo-no-endpoint') {
-      return buildApolloPlaygroundUrl(settings.sandboxUrl, query, variables);
-    } else {
-      return buildGraphiQLUrl(settings.sandboxUrl, query, variables);
-    }
-  }
+  const sandboxReady = validateSandboxUrl(settings.sandboxUrl);
 
   const handleOpenSandbox = () => {
-    if (!sandboxReady) return;
-    openInSandbox(buildSandboxUrl(normalizedQuery, request.variables));
+    openInSandbox(settings, request);
   };
 
   const handleOpenLine = (subquery: Subquery) => {
-    if (!sandboxReady) return;
-    // Only the values the sub-query declares: the others would be noise in the
-    // sandbox, and have no reason to travel in its URL.
-    const used = Object.entries(request.variables ?? {}).filter(([name]) =>
-      subquery.variableNames.includes(name)
-    );
-    const variables = used.length > 0 ? Object.fromEntries(used) : null;
-    openInSandbox(buildSandboxUrl(subquery.text, variables));
+    openInSandbox(settings, request, subquery);
   };
 
   return (

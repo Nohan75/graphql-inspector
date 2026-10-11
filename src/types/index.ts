@@ -1,3 +1,5 @@
+import type { SandboxFormat } from '../utils/sandbox';
+
 export type OperationType = 'query' | 'mutation' | 'subscription';
 
 export interface GQLRequest {
@@ -20,8 +22,6 @@ export interface GQLRequest {
 }
 
 export type TabId = 'headers' | 'request' | 'response' | 'raw';
-
-export type SandboxFormat = 'auto' | 'apollo' | 'apollo-no-endpoint' | 'graphiql';
 
 export interface Settings {
   sandboxUrl: string;
