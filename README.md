@@ -101,7 +101,8 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm test` | Runs the tests once with Vitest |
 | `npm run typecheck` | Checks the types of the whole project |
 | `npm run lint` | Runs ESLint |
-| `npm run check` | Runs the type check, the linter and the tests, in that order |
+| `npm run check` | Runs the type check, the linter, the tests and `build:check`, in that order |
+| `npm run build:check` | The production build in `.output/chrome-mv3-check/`: it checks that the extension builds without rewriting the folder loaded in the browser |
 | `npm run panel` | Serves the panel preview at `http://localhost:5183/` |
 
 Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The tests of an entry point are one folder down, in `src/entrypoints/__tests__/`: WXT builds every script placed directly in `src/entrypoints/` as an entry point.

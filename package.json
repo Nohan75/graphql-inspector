@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:check": "wxt build -c wxt.check.config.ts",
     "zip": "wxt zip",
     "test": "vitest run",
     "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint .",
-    "check": "npm run typecheck && npm run lint && npm test",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build:check",
     "panel": "vite --config preview/vite.config.mts"
   },
   "repository": {
