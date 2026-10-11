@@ -101,7 +101,8 @@ export function createRequestLog(): RequestLog {
   /**
    * Id of an interceptor's report → the captured request it joined, for the
    * requests that stopped being pending before the interceptor reported
-   * their response. That response can still bring what they lack.
+   * their response: completed by DevTools, or given up on. That response
+   * can still bring what they lack.
    */
   const awaitingReport = new Map<string, number>();
 
@@ -222,17 +223,30 @@ export function createRequestLog(): RequestLog {
       return;
     }
 
-    // Nothing pending under that id. DevTools may have completed the request
-    // first: the body of the response is then still news when the request
-    // has none, since DevTools does not always give one.
+    // Nothing pending under that id: the request stopped waiting before its
+    // response was reported.
     const id = awaitingReport.get(report.id);
     if (id === undefined) return;
     awaitingReport.delete(report.id);
+    const request = requests.find((candidate) => candidate.id === id);
+    if (!request) return;
     const responseRaw = report.body.slice(0, MAX_BODY_LENGTH);
-    if (!responseRaw) return;
-    change(id, (request) =>
-      request.responseRaw ? null : { response: parseJson(responseRaw), responseRaw }
-    );
+
+    if (request.timedOut) {
+      // Given up on: a response that comes after all still completes it
+      completed.set(completedKey(request.url, request.operationName), { id, at: now });
+      change(id, () => ({
+        responseHeaders: report.responseHeaders,
+        response: parseJson(responseRaw),
+        responseRaw,
+        status: report.status,
+        timedOut: false,
+      }));
+    } else if (!request.responseRaw && responseRaw) {
+      // Completed by DevTools, which does not always give a body: the one
+      // read in the page is news when the request has none.
+      change(id, () => ({ response: parseJson(responseRaw), responseRaw }));
+    }
   }
 
   /** DevTools completes a pending request, and its body is asked for */
@@ -349,6 +363,8 @@ export function createRequestLog(): RequestLog {
         const kept = waiting.filter((entry) => {
           if (now - entry.since <= PENDING_TIMEOUT) return true;
           givenUp.push(entry.id);
+          // Its response may still come, and will still complete it
+          if (entry.reportId !== undefined) awaitingReport.set(entry.reportId, entry.id);
           return false;
         });
         if (kept.length === 0) pending.delete(url);
@@ -360,6 +376,11 @@ export function createRequestLog(): RequestLog {
       }
       for (const [id, askedAt] of awaitingBody) {
         if (now - askedAt >= BODY_WINDOW) awaitingBody.delete(id);
+      }
+      // No use waiting on behalf of a request the log no longer lists
+      const listed = new Set(requests.map((request) => request.id));
+      for (const [reportId, id] of awaitingReport) {
+        if (!listed.has(id)) awaitingReport.delete(reportId);
       }
 
       if (givenUp.length > 0) {

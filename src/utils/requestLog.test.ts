@@ -244,14 +244,45 @@ describe('a pending request without a response', () => {
     expect(log.requests[0]).toMatchObject({ pending: false, timedOut: true, status: 0 });
   });
 
-  it('stays given up on when its response comes afterwards', () => {
+  it('is completed all the same by the response the interceptor reports afterwards, however late', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+    log.receive(request('page-1', 'Viewer'), 10);
+    log.tick(35 * SECOND);
+    expect(states(log)).toEqual(['Viewer: given up']);
+
+    log.receive(response('page-1'), 90 * SECOND);
+
+    expect(states(log)).toEqual(['Viewer: 200']);
+    expect(log.requests[0]).toMatchObject({
+      timedOut: false,
+      responseHeaders: [{ name: 'x-answered-to', value: 'page' }],
+      responseRaw: '{"data":"page-1"}',
+      response: { data: 'page-1' },
+    });
+  });
+
+  it('is completed by a late response that has no body', () => {
     const log = createRequestLog();
     log.receive(request('page-1', 'Viewer'), 0);
     log.tick(35 * SECOND);
 
-    log.receive(response('page-1'), 36 * SECOND);
+    log.receive(response('page-1', { status: 504, body: '' }), 60 * SECOND);
 
-    expect(states(log)).toEqual(['Viewer: given up']);
+    expect(states(log)).toEqual(['Viewer: 504']);
+  });
+
+  it('does not take what DevTools reports just after its late response for another request', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.tick(35 * SECOND);
+    log.receive(response('page-1'), 60 * SECOND);
+
+    const id = log.networkFinished(finished('Viewer'), 60 * SECOND + 50);
+
+    expect(states(log)).toEqual(['Viewer: 200']);
+    expect(log.requests[0].requestHeaders).toEqual([{ name: 'x-seen-by', value: 'network' }]);
+    expect(id).toBeNull();
   });
 
   it('is still completed by a response that comes after 30 seconds but before the clock ticks', () => {

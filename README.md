@@ -143,7 +143,7 @@ The **Run Batch** button adds nothing to the panel: batched requests are not cap
 
 - Type badge: `Q` (query), `M` (mutation), `S` (subscription).
 - Operation name (`Anonymous` if it has none) and endpoint URL.
-- HTTP status, green for 2xx and red from 400 up. `●●●` means the response is pending, `—` that no response was captured after 30 seconds.
+- HTTP status, green for 2xx and red from 400 up. `●●●` means the response is pending, `—` that no response was captured after 30 seconds. A response that comes later still completes the request.
 - **Filter requests…** filters on operation name or URL.
 - **Clear** empties the list.
 - **Preserve log** keeps the list across navigations and reloads. Without it, the list is cleared on every navigation.
