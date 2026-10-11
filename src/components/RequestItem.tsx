@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import type { GQLRequest } from '../types';
-import { buildApolloSandboxUrl, buildApolloPlaygroundUrl, buildGraphiQLUrl, openInSandbox, validateSandboxUrl } from '../utils/sandbox';
-import type { SandboxFormat } from '../types';
-import { parseQueryDocument } from '../utils/queryDocument';
+import type { GQLRequest, Settings } from '../types';
+import { openInSandbox } from '../utils/sandbox';
 
 interface RequestItemProps {
   request: GQLRequest;
   isSelected: boolean;
   onClick: () => void;
-  sandboxUrl: string;
-  sandboxFormat: SandboxFormat;
+  settings: Settings;
   /** 'A' = first in compare pair (red), 'B' = second (green), undefined = not selected */
   comparePosition?: 'A' | 'B';
   onCompareToggle: (e: React.MouseEvent) => void;
@@ -31,8 +28,7 @@ export function RequestItem({
   request,
   isSelected,
   onClick,
-  sandboxUrl,
-  sandboxFormat,
+  settings,
   comparePosition,
   onCompareToggle,
 }: RequestItemProps) {
@@ -43,22 +39,10 @@ export function RequestItem({
 
   const handleSandbox = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!validateSandboxUrl(sandboxUrl)) {
+    if (!openInSandbox(settings, request)) {
       setSandboxError(true);
       setTimeout(() => setSandboxError(false), 3000);
-      return;
     }
-    const normalizedQuery = parseQueryDocument(request.query).text;
-    const isAutoApollo = sandboxUrl.includes('apollographql') || sandboxUrl.includes('apollo.dev');
-    let url: string;
-    if (sandboxFormat === 'apollo' || (sandboxFormat === 'auto' && isAutoApollo)) {
-      url = buildApolloSandboxUrl(sandboxUrl, normalizedQuery, request.variables, request.url);
-    } else if (sandboxFormat === 'apollo-no-endpoint') {
-      url = buildApolloPlaygroundUrl(sandboxUrl, normalizedQuery, request.variables);
-    } else {
-      url = buildGraphiQLUrl(sandboxUrl, normalizedQuery, request.variables);
-    }
-    openInSandbox(url);
   };
 
   return (

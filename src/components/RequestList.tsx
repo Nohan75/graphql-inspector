@@ -1,13 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import type { GQLRequest, SandboxFormat } from '../types';
+import type { GQLRequest, Settings } from '../types';
 import { RequestItem } from './RequestItem';
 
 interface RequestListProps {
   requests: GQLRequest[];
   selectedId: number | null;
   filterText: string;
-  sandboxUrl: string;
-  sandboxFormat: SandboxFormat;
+  settings: Settings;
   compareIds: number[];
   onSelect: (id: number) => void;
   onCompareToggle: (id: number) => void;
@@ -17,8 +16,7 @@ export function RequestList({
   requests,
   selectedId,
   filterText,
-  sandboxUrl,
-  sandboxFormat,
+  settings,
   compareIds,
   onSelect,
   onCompareToggle,
@@ -73,8 +71,7 @@ export function RequestList({
             request={req}
             isSelected={req.id === selectedId}
             onClick={() => onSelect(req.id)}
-            sandboxUrl={sandboxUrl}
-            sandboxFormat={sandboxFormat}
+            settings={settings}
             comparePosition={comparePosition}
             onCompareToggle={(e) => { e.stopPropagation(); onCompareToggle(req.id); }}
           />

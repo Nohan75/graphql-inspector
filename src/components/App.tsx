@@ -125,8 +125,7 @@ export function App() {
             requests={requests}
             selectedId={selectedId}
             filterText={filterText}
-            sandboxUrl={settings.sandboxUrl}
-            sandboxFormat={settings.sandboxFormat}
+            settings={settings}
             compareIds={compareIds}
             onSelect={setSelectedId}
             onCompareToggle={handleCompareToggle}

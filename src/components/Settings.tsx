@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { Settings, SandboxFormat } from '../types';
-import { validateSandboxUrl } from '../utils/sandbox';
+import type { Settings } from '../types';
+import { SANDBOX_FORMATS, validateSandboxUrl, type SandboxFormat } from '../utils/sandbox';
 
 interface SettingsProps {
   settings: Settings;
@@ -72,10 +72,9 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
           onChange={(e) => setSandboxFormat(e.target.value as SandboxFormat)}
           className="w-full bg-bg text-text border border-border rounded-[3px] px-[10px] py-1.5 text-xs outline-none font-mono cursor-pointer focus:border-accent"
         >
-          <option value="auto">Auto-detect (apollographql → Apollo, otherwise GraphiQL)</option>
-          <option value="apollo">Apollo Studio — ?document= + &endpoint=</option>
-          <option value="apollo-no-endpoint">Apollo Playground — ?document= (no endpoint)</option>
-          <option value="graphiql">GraphiQL — ?query= + &variables=</option>
+          {SANDBOX_FORMATS.map(({ id, label }) => (
+            <option key={id} value={id}>{label}</option>
+          ))}
         </select>
         <div className="mt-1 text-[11px] text-text-muted">
           Use <strong className="text-text">Apollo Playground</strong> if your sandbox is hosted on your own GraphQL endpoint
