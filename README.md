@@ -159,7 +159,7 @@ Clicking a request opens four tabs:
 | --- | --- |
 | **Headers** | Request and response headers |
 | **Request** | The query, reformatted, with syntax highlighting, line numbers and foldable blocks. Variables shown as a collapsible JSON tree. |
-| **Response** | The response as a collapsible JSON tree, with search |
+| **Response** | The response as a collapsible JSON tree, with search. **Collapse all** collapses everything below the top level, **Expand all** expands it all again. |
 | **Raw** | The response body as received |
 
 The query, the variables, the response and the raw body each have a **Copy** button.

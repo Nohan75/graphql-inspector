@@ -1,11 +1,19 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { flattenJson, hiddenNodes } from '../utils/jsonTree';
+import React, { useState, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
+import { collapseAll, flattenJson, hiddenNodes } from '../utils/jsonTree';
 
 interface JsonTreeProps {
   data: unknown;
   searchTerm?: string;
   currentMatchIndex?: number;
   onMatchesFound?: (count: number) => void;
+  /** To collapse or expand the whole tree from outside it */
+  ref?: React.Ref<JsonTreeHandle>;
+}
+
+export interface JsonTreeHandle {
+  /** Collapses everything below the top level */
+  collapseAll(): void;
+  expandAll(): void;
 }
 
 function highlightText(
@@ -47,11 +55,21 @@ export function JsonTree({
   searchTerm = '',
   currentMatchIndex = 0,
   onMatchesFound,
+  ref,
 }: JsonTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const nodes = useMemo(() => flattenJson(data), [data]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      collapseAll: () => setCollapsed(collapseAll(nodes)),
+      expandAll: () => setCollapsed(new Set()),
+    }),
+    [nodes]
+  );
 
   const hidden = useMemo(() => hiddenNodes(nodes, collapsed), [nodes, collapsed]);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flattenJson, hiddenNodes, type JsonNode } from './jsonTree';
+import { collapseAll, flattenJson, hiddenNodes, type JsonNode } from './jsonTree';
 
 /** A line the way the tree displays it, indented by its depth */
 const shown = (node: JsonNode) =>
@@ -119,5 +119,52 @@ describe('a collapsed line', () => {
 
   it('leaves every line displayed when there is none', () => {
     expect(visibleWith([])).toHaveLength(13);
+  });
+});
+
+describe('collapsing everything', () => {
+  /** The lines displayed for a value once everything is collapsed, then these labels expanded again */
+  function visibleAfterCollapseAll(value: unknown, expandedLabels: string[] = []) {
+    const nodes = flattenJson(value);
+    const collapsed = collapseAll(nodes);
+    expandedLabels.forEach((label) => collapsed.delete(keyOf(nodes, label)));
+    const hidden = hiddenNodes(nodes, collapsed);
+    return nodes.filter((node) => !hidden.has(node.key)).map(shown);
+  }
+
+  it('leaves the top level in sight: the first line stays expanded, the ones it holds are collapsed', () => {
+    expect(visibleAfterCollapseAll({ data: document.data, errors: [{ message: 'Not found' }] })).toEqual([
+      '{2}',
+      '  data: {4}',
+      '  errors: [1]',
+      '}',
+    ]);
+  });
+
+  it('collapses every level, so that expanding a line shows the next level collapsed', () => {
+    expect(visibleAfterCollapseAll(document, ['data'])).toEqual([
+      '{1}',
+      '  data: {4}',
+      '    name: "Rick"',
+      '    tags: [2]',
+      '    origin: {1}',
+      '    episodes: []',
+      '  }',
+      '}',
+    ]);
+  });
+
+  it('does the same for a list at the top', () => {
+    expect(visibleAfterCollapseAll([{ name: 'Rick' }, { name: 'Morty' }])).toEqual([
+      '[2]',
+      '  0: {1}',
+      '  1: {1}',
+      ']',
+    ]);
+  });
+
+  it('collapses nothing in a value that holds nothing', () => {
+    expect(collapseAll(flattenJson('just text')).size).toBe(0);
+    expect(collapseAll(flattenJson({})).size).toBe(0);
   });
 });

@@ -28,6 +28,17 @@ export function flattenJson(value: unknown): JsonNode[] {
 }
 
 /**
+ * The lines to collapse so that only the top level is left in sight: every
+ * line that can be collapsed, the first one excepted. Each level is
+ * collapsed, so expanding a line shows the next level still collapsed.
+ */
+export function collapseAll(nodes: JsonNode[]): Set<number> {
+  return new Set(
+    nodes.filter((node) => node.isCollapsible && node.depth > 0).map((node) => node.key)
+  );
+}
+
+/**
  * Keys of the lines that collapsed lines hide: everything they hold, and
  * their closing line, which the collapsed line stands for.
  */
