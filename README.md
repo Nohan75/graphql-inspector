@@ -146,6 +146,7 @@ The **Run Batch** button adds nothing to the panel: batched requests are not cap
 - Operation name (`Anonymous` if it has none) and endpoint URL.
 - HTTP status, green for 2xx and red from 400 up. When the response carries GraphQL errors, which a server usually sends with a `200`, the status is red whatever it is and a red badge counts them; their messages are in the tooltip. `●●●` means the response is pending, `—` that no response was captured after 30 seconds. A response that comes later still completes the request.
 - **Filter requests…** filters on operation name or URL.
+- The row of filters above the list narrows it further. **Q**, **M** and **S** keep the queries, the mutations or the subscriptions. **Errors** keeps what went wrong: an HTTP status from 400 up, GraphQL errors, a request that failed or got no response. **Pending** keeps the requests still waiting for their response. Each one is a switch, and they combine with the text filter. A selected request stays in the detail panel when a filter hides its row.
 - **Clear** empties the list.
 - **Preserve log** keeps the list across navigations and reloads. Without it, the list is cleared on every navigation.
 - The list scrolls to the latest request automatically and keeps the 500 most recent ones.

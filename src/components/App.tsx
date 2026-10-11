@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Toolbar } from './Toolbar';
 import { RequestList } from './RequestList';
+import { ListFilters } from './ListFilters';
 import { DetailPanel } from './DetailPanel';
 import { ComparePanel } from './ComparePanel';
 import { SettingsModal } from './Settings';
 import { useRequests } from '../hooks/useRequests';
 import { useSettings } from '../hooks/useSettings';
 import type { GQLRequest } from '../types';
+import { NO_FILTER, type RequestFilter } from '../utils/requestFilter';
 
 const MIN_SIDEBAR_WIDTH = 180;
 const MIN_DETAIL_WIDTH = 250;
@@ -14,7 +16,7 @@ const HANDLE_WIDTH = 4;
 const DEFAULT_SIDEBAR_WIDTH = 280;
 
 export function App() {
-  const [filterText, setFilterText] = useState('');
+  const [filter, setFilter] = useState<RequestFilter>(NO_FILTER);
   const [preserveLog, setPreserveLog] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
@@ -106,9 +108,9 @@ export function App() {
     <div className="flex flex-col h-full bg-bg text-text">
       {/* Toolbar */}
       <Toolbar
-        filterText={filterText}
+        filterText={filter.text}
         preserveLog={preserveLog}
-        onFilterChange={setFilterText}
+        onFilterChange={(text) => setFilter((current) => ({ ...current, text }))}
         onPreserveLogChange={setPreserveLog}
         onClear={handleClear}
         onOpenSettings={() => setShowSettings(true)}
@@ -121,10 +123,11 @@ export function App() {
           style={{ width: sidebarWidth }}
           className="shrink-0 flex flex-col bg-sidebar border-r border-border overflow-hidden"
         >
+          <ListFilters filter={filter} onChange={setFilter} />
           <RequestList
             requests={requests}
             selectedId={selectedId}
-            filterText={filterText}
+            filter={filter}
             settings={settings}
             compareIds={compareIds}
             onSelect={setSelectedId}
