@@ -319,7 +319,7 @@ describe('a finished request DevTools reports', () => {
     expect(id).toBe(2);
   });
 
-  it('makes the response the interceptor then reports for the same request ignored', () => {
+  it('leaves the request open to the body of the response the interceptor reports afterwards', () => {
     const log = createRequestLog();
     log.receive(pending('Viewer'), 0);
     log.receive(request('page-1', 'Viewer'), 10);
@@ -327,7 +327,13 @@ describe('a finished request DevTools reports', () => {
     log.networkFinished(finished('Viewer', { status: 201 }), 100);
     log.receive(response('page-1'), 110);
 
-    expect(log.requests[0]).toMatchObject({ status: 201, responseRaw: '' });
+    // the body from the page, the status and the headers still from the network
+    expect(log.requests[0]).toMatchObject({
+      status: 201,
+      responseHeaders: [{ name: 'x-answered-to', value: 'network' }],
+      responseRaw: '{"data":"page-1"}',
+      response: { data: 'page-1' },
+    });
   });
 
   it('only brings its headers to a request the interceptor completed less than 5 seconds before', () => {
@@ -344,6 +350,22 @@ describe('a finished request DevTools reports', () => {
       responseRaw: '{"data":"page-1"}',
     });
     expect(id).toBeNull();
+  });
+
+  it('asks for the response body when the interceptor completed the request without one', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.receive(response('page-1', { body: '' }), 100);
+
+    const id = log.networkFinished(finished('Viewer'), 200);
+    expect(id).toBe(1);
+
+    log.networkBody(1, '{"data":"from the network"}', 300);
+    expect(log.requests[0]).toMatchObject({
+      status: 200,
+      responseRaw: '{"data":"from the network"}',
+      response: { data: 'from the network' },
+    });
   });
 
   it('is listed as another request when the interceptor completed its request 5 seconds before or more', () => {
@@ -426,6 +448,18 @@ describe('the response body DevTools gives', () => {
     log.networkBody(id!, 'x'.repeat(2_000_001), 100);
 
     expect(log.requests[0].responseRaw).toHaveLength(2_000_000);
+  });
+
+  it('does not replace the body the interceptor brought in the meantime', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+    log.receive(request('page-1', 'Viewer'), 10);
+    const id = log.networkFinished(finished('Viewer'), 100);
+    log.receive(response('page-1'), 110);
+
+    log.networkBody(id!, '{"data":"from the network"}', 150);
+
+    expect(log.requests[0].responseRaw).toBe('{"data":"page-1"}');
   });
 
   it('is ignored for a request it was not asked for', () => {

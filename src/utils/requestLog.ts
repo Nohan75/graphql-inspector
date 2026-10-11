@@ -98,6 +98,12 @@ export function createRequestLog(): RequestLog {
   const completed = new Map<string, { id: number; at: number }>();
   /** Captured requests whose body was asked of DevTools → when it was asked */
   const awaitingBody = new Map<number, number>();
+  /**
+   * Id of an interceptor's report → the captured request it joined, for the
+   * requests that stopped being pending before the interceptor reported
+   * their response. That response can still bring what they lack.
+   */
+  const awaitingReport = new Map<string, number>();
 
   function add(request: Omit<GQLRequest, 'id'>): number {
     const id = ++lastId;
@@ -215,12 +221,24 @@ export function createRequestLog(): RequestLog {
       }));
       return;
     }
-    // Nothing pending under that id: already completed, or given up on
+
+    // Nothing pending under that id. DevTools may have completed the request
+    // first: the body of the response is then still news when the request
+    // has none, since DevTools does not always give one.
+    const id = awaitingReport.get(report.id);
+    if (id === undefined) return;
+    awaitingReport.delete(report.id);
+    const responseRaw = report.body.slice(0, MAX_BODY_LENGTH);
+    if (!responseRaw) return;
+    change(id, (request) =>
+      request.responseRaw ? null : { response: parseJson(responseRaw), responseRaw }
+    );
   }
 
   /** DevTools completes a pending request, and its body is asked for */
   function completeFromNetwork(entry: Pending, finished: FinishedRequest, now: number): number {
     complete(finished.url, entry, now);
+    if (entry.reportId !== undefined) awaitingReport.set(entry.reportId, entry.id);
     change(entry.id, () => ({
       requestHeaders: finished.requestHeaders,
       responseHeaders: finished.responseHeaders,
@@ -230,6 +248,21 @@ export function createRequestLog(): RequestLog {
     }));
     awaitingBody.set(entry.id, now);
     return entry.id;
+  }
+
+  /**
+   * DevTools reports a request that is already completed: its headers are
+   * news, and its body too when the request has none.
+   */
+  function bringFromNetwork(id: number, finished: FinishedRequest, now: number): number | null {
+    change(id, () => ({
+      requestHeaders: finished.requestHeaders,
+      responseHeaders: finished.responseHeaders,
+    }));
+    const request = requests.find((candidate) => candidate.id === id);
+    if (!request || request.responseRaw) return null;
+    awaitingBody.set(id, now);
+    return id;
   }
 
   return {
@@ -270,15 +303,10 @@ export function createRequestLog(): RequestLog {
       const entry = waiting.find((candidate) => candidate.operationName === operationName);
       if (entry) return completeFromNetwork(entry, finished, now);
 
-      // Already completed by the interceptor? Then only the headers are
-      // news: the body was captured in the page.
+      // Already completed by the interceptor? Then it is not listed again.
       const recent = completed.get(completedKey(finished.url, operationName));
       if (recent && now - recent.at < RESOLVED_WINDOW) {
-        change(recent.id, () => ({
-          requestHeaders: finished.requestHeaders,
-          responseHeaders: finished.responseHeaders,
-        }));
-        return null;
+        return bringFromNetwork(recent.id, finished, now);
       }
 
       // A request no other source reported: DevTools opened after it left, …
@@ -346,6 +374,7 @@ export function createRequestLog(): RequestLog {
       pending.clear();
       completed.clear();
       awaitingBody.clear();
+      awaitingReport.clear();
     },
   };
 }
