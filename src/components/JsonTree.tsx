@@ -1,129 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { flattenJson, hiddenNodes } from '../utils/jsonTree';
 
 interface JsonTreeProps {
   data: unknown;
   searchTerm?: string;
   currentMatchIndex?: number;
   onMatchesFound?: (count: number) => void;
-}
-
-interface FlatNode {
-  key: number;
-  depth: number;
-  label: string | null;  // object key or array index
-  valuePreview: string;
-  isCollapsible: boolean;
-  type: 'open' | 'close' | 'leaf';
-  closingFor?: number;    // key of the opening node this closes
-  childCount?: number;
-  lineNumber: number;
-  searchText: string;     // text content used for search
-}
-
-function buildFlatNodes(
-  value: unknown,
-  depth: number,
-  label: string | null,
-  nodes: FlatNode[],
-  lineCounter: { n: number }
-): void {
-  const key = nodes.length;
-  const line = lineCounter.n++;
-
-  if (value === null) {
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: 'null',
-      isCollapsible: false,
-      type: 'leaf',
-      lineNumber: line,
-      searchText: label ? `${label}: null` : 'null',
-    });
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    const childCount = value.length;
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: childCount === 0 ? '[]' : `[${childCount}]`,
-      isCollapsible: childCount > 0,
-      type: 'open',
-      childCount,
-      lineNumber: line,
-      searchText: label ? `${label}: [` : '[',
-    });
-    if (childCount > 0) {
-      value.forEach((item, idx) => {
-        buildFlatNodes(item, depth + 1, String(idx), nodes, lineCounter);
-      });
-      const closeLine = lineCounter.n++;
-      nodes.push({
-        key: nodes.length,
-        depth,
-        label: null,
-        valuePreview: ']',
-        isCollapsible: false,
-        type: 'close',
-        closingFor: key,
-        lineNumber: closeLine,
-        searchText: ']',
-      });
-    }
-    return;
-  }
-
-  if (typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>);
-    const childCount = entries.length;
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: childCount === 0 ? '{}' : `{${childCount}}`,
-      isCollapsible: childCount > 0,
-      type: 'open',
-      childCount,
-      lineNumber: line,
-      searchText: label ? `${label}: {` : '{',
-    });
-    if (childCount > 0) {
-      entries.forEach(([k, v]) => {
-        buildFlatNodes(v, depth + 1, k, nodes, lineCounter);
-      });
-      const closeLine = lineCounter.n++;
-      nodes.push({
-        key: nodes.length,
-        depth,
-        label: null,
-        valuePreview: '}',
-        isCollapsible: false,
-        type: 'close',
-        closingFor: key,
-        lineNumber: closeLine,
-        searchText: '}',
-      });
-    }
-    return;
-  }
-
-  // Primitive
-  const displayValue =
-    typeof value === 'string' ? `"${value}"` : String(value);
-  nodes.push({
-    key,
-    depth,
-    label,
-    valuePreview: displayValue,
-    isCollapsible: false,
-    type: 'leaf',
-    lineNumber: line,
-    searchText: label ? `${label}: ${displayValue}` : displayValue,
-  });
 }
 
 function highlightText(
@@ -169,39 +51,9 @@ export function JsonTree({
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const nodes = useMemo(() => {
-    const list: FlatNode[] = [];
-    buildFlatNodes(data, 0, null, list, { n: 1 });
-    return list;
-  }, [data]);
+  const nodes = useMemo(() => flattenJson(data), [data]);
 
-  // Compute which nodes are hidden (inside a collapsed parent)
-  const hiddenNodes = useMemo(() => {
-    const hidden = new Set<number>();
-    // Track which open nodes are collapsing us
-    const stack: number[] = [];
-
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-
-      if (node.type === 'close' && node.closingFor !== undefined) {
-        const idx = stack.indexOf(node.closingFor);
-        if (idx !== -1) {
-          stack.splice(idx, 1);
-        }
-      }
-
-      if (stack.length > 0) {
-        hidden.add(node.key);
-      }
-
-      if (node.type === 'open' && collapsed.has(node.key)) {
-        stack.push(node.key);
-      }
-    }
-
-    return hidden;
-  }, [nodes, collapsed]);
+  const hidden = useMemo(() => hiddenNodes(nodes, collapsed), [nodes, collapsed]);
 
   // Compute search matches
   const { matchNodeKeys, matchTotal } = useMemo(() => {
@@ -244,7 +96,7 @@ export function JsonTree({
   return (
     <div className="code-font">
       {nodes.map((node) => {
-        if (hiddenNodes.has(node.key)) return null;
+        if (hidden.has(node.key)) return null;
 
         const isCurrentMatch = node.key === currentMatchNodeKey;
         const hasMatch =
