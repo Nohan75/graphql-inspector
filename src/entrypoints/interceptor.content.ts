@@ -144,7 +144,7 @@ export default defineContentScript({
         bodyText = Promise.resolve(init.body);
       } else if (input instanceof Request) {
         try {
-          bodyText = input.clone().text();
+          bodyText = input.clone().text().catch(() => null);
         } catch {
           bodyText = Promise.resolve(null);
         }
@@ -166,9 +166,36 @@ export default defineContentScript({
 
       const promise = _fetch(input, init);
 
+      // Copy the response BEFORE the page can read it: once read, a response
+      // cannot be cloned. The handlers of a promise run in the order they
+      // were attached, so this one is attached here, before the page gets the
+      // promise back, and not below, once the request body has been read.
+      let wanted = true;
+      const response = promise.then(
+        (res) => {
+          let copy: Response | null = null;
+          if (wanted) {
+            try {
+              copy = res.clone();
+            } catch {
+              // already read or locked: reported without its body
+            }
+          }
+          return { res, copy };
+        },
+        () => null // the request failed before any response
+      );
+
       bodyText.then((text) => {
         const gql = parseGraphQLBody(text);
-        if (!gql) return;
+        if (!gql) {
+          // Not a GraphQL request: its response is left alone. A copy taken
+          // while the request body was still being read is let go of, or it
+          // would hold the response body for as long as the page reads it.
+          wanted = false;
+          response.then((r) => r?.copy?.body?.cancel()).catch(() => {});
+          return;
+        }
 
         const id = nextId();
         post({
@@ -179,28 +206,22 @@ export default defineContentScript({
         const respond = (status: number, responseHeaders: Header[], body: string) =>
           post({ type: 'gql_response', payload: { id, url, status, responseHeaders, body } });
 
-        promise.then(
-          (res) => {
-            const responseHeaders = headerList(res.headers);
-            const status = res.status;
-            // clone() so the page still receives an unread body
-            let copy: Response | null;
-            try {
-              copy = res.clone();
-            } catch {
-              copy = null;
-            }
-            if (!copy) {
-              respond(status, responseHeaders, '');
-              return;
-            }
-            copy.text().then(
-              (body) => respond(status, responseHeaders, body.slice(0, MAX_BODY)),
-              () => respond(status, responseHeaders, '')
-            );
-          },
-          () => respond(0, [], '')
-        );
+        response.then((r) => {
+          if (!r) {
+            respond(0, [], '');
+            return;
+          }
+          const responseHeaders = headerList(r.res.headers);
+          const status = r.res.status;
+          if (!r.copy) {
+            respond(status, responseHeaders, '');
+            return;
+          }
+          r.copy.text().then(
+            (body) => respond(status, responseHeaders, body.slice(0, MAX_BODY)),
+            () => respond(status, responseHeaders, '')
+          );
+        });
       });
 
       return promise;
