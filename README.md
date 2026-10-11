@@ -101,7 +101,11 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm test` | Runs the tests once with Vitest |
 | `npm run typecheck` | Checks the types of the whole project |
 | `npm run lint` | Runs ESLint |
+| `npm run check` | Runs the type check, the linter, the tests and `build:check`, in that order |
+| `npm run build:check` | The production build in `.output/chrome-mv3-check/`: it checks that the extension builds without rewriting the folder loaded in the browser |
 | `npm run panel` | Serves the panel preview at `http://localhost:5183/` |
+| `npm run panel:dump -- <steps>` | Replays steps in the preview and prints the panel as text |
+| `npm run panel:shot -- <file.png> <steps>` | Replays steps in the preview and takes a picture of the panel |
 
 Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The tests of an entry point are one folder down, in `src/entrypoints/__tests__/`: WXT builds every script placed directly in `src/entrypoints/` as an entry point.
 
@@ -113,6 +117,7 @@ Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The te
 - A sandbox would open in a new tab; the preview prints its URL under the panel instead.
 - `?click=` parameters replay clicks in order, to reach a given state from the address bar. For example, `?click=Response` opens the Response tab, and `?click=Add%20to%20compare%232&click=Add%20to%20compare%232` puts the second and third requests in compare mode.
 - `?type=` parameters replace the text of the field that has the focus, in the same sequence as the clicks. For example, `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save` saves another sandbox URL. A click on a field, matched by its placeholder, gives it the focus: `?click=Filter%20requests%E2%80%A6&type=Character` filters the list.
+- From the command line, the same steps are written as they read, and the panel comes back as text or as a picture: `npm run panel:dump -- click=Response "click=Collapse all"` and `npm run panel:shot -- shot.png click=Response`. Both need Chrome, start the preview for the run when it is not up, and fail when a step matches nothing. The text gives one line per line on screen and spells out what a picture shows by a colour: the open tab, the selected request, a filter that is on.
 
 The preview does not capture anything. To exercise the capture itself, load the extension in a browser.
 

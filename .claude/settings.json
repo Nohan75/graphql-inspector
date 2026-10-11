@@ -1,0 +1,19 @@
+{
+  "env": {
+    "NO_COLOR": "1"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-node-modules.sh\"",
+            "timeout": 180,
+            "statusMessage": "Checking node_modules against package-lock.json"
+          }
+        ]
+      }
+    ]
+  }
+}

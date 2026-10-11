@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '../src/components/App';
 import { installFakeChrome, TAB_OPENED } from './fakeChrome';
+import { outline } from './outline';
 import './preview.css';
 
 // Before the panel renders: its hooks read `chrome` as soon as they mount
@@ -54,6 +55,13 @@ createRoot(container).render(
  *
  * Steps run in the order given, one after the other.
  */
+/** A step that could not be replayed: said in the console and kept for the command line */
+function problem(message: string) {
+  console.error(`preview: ${message}`);
+  const problems = document.getElementById('preview-problems');
+  if (problems) problems.textContent += `${message}\n`;
+}
+
 async function replaySteps() {
   const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   await settle(300); // let the fixtures arrive and render
@@ -64,6 +72,9 @@ async function replaySteps() {
     else continue;
     await settle(100);
   }
+
+  const text = document.getElementById('preview-outline');
+  if (text && container) text.textContent = outline(container);
   document.documentElement.dataset.previewReady = 'true';
 }
 
@@ -86,7 +97,7 @@ function click(step: string) {
   );
   const target = matches[Number(nth) - 1];
   if (!target) {
-    console.error(`preview: no element matches "${step}"`);
+    problem(`no element matches "${step}"`);
     return;
   }
   target.click();
@@ -97,7 +108,7 @@ function click(step: string) {
 function type(text: string) {
   const field = document.activeElement;
   if (!(field instanceof HTMLInputElement)) {
-    console.error(`preview: no field has the focus to type "${text}" into`);
+    problem(`no field has the focus to type "${text}" into`);
     return;
   }
   // Through the element's own setter, then an input event: React ignores a

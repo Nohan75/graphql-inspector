@@ -65,6 +65,7 @@ export function RequestItem({
   return (
     <div
       onClick={onClick}
+      aria-current={isSelected ? 'true' : undefined}
       className={`flex items-center gap-1.5 px-2 py-[5px] cursor-pointer border-b border-border text-text select-none
         ${isSelected ? 'bg-selected' : 'bg-transparent hover:bg-hover'}`}
     >

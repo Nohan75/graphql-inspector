@@ -13,7 +13,7 @@ The rule is in `CLAUDE.md`, under "Language", so that it is seen while writing. 
 
 ## Tests
 
-- A test crosses a module's interface and sits next to the module as `*.test.ts`. For an entry point it sits in `src/entrypoints/__tests__/`, since WXT builds every script placed directly in `src/entrypoints/`.
+- A test crosses a module's interface and sits next to the module as `*.test.ts`.
 - Expected values are written out by hand. A fix starts from a test seen failing.
 
 ## Documentation follows behaviour
@@ -24,5 +24,5 @@ The rule is in `CLAUDE.md`, under "Language", so that it is seen while writing. 
 
 ## Pull requests
 
-- The description says what was checked and what was not. A change to the interface is seen in the panel preview (the `panel` skill); a change to the capture says whether a person loaded the extension in a browser.
+- The description says what was checked and what was not. A change to the interface is seen in the panel preview (the `panel` skill); a change to the capture goes through its tests (the `capture` skill) and says whether a person loaded the extension in a browser.
 - A pull request that bumps the version says that merging it publishes a release.
