@@ -13,7 +13,7 @@ The rule is in `CLAUDE.md`, under "Language", so that it is seen while writing. 
 
 ## Tests
 
-- A test crosses a module's interface and sits next to the module as `*.test.ts`.
+- A test crosses a module's interface and sits next to the module as `*.test.ts`. For an entry point it sits in `src/entrypoints/__tests__/`, since WXT builds every script placed directly in `src/entrypoints/`.
 - Expected values are written out by hand. A fix starts from a test seen failing.
 
 ## Documentation follows behaviour

@@ -62,6 +62,7 @@ export interface Header {
 export interface RequestReport extends GraphQLBody {
   /** Minted by the interceptor. The response carries the same one. */
   id: string;
+  /** Absolute, as the browser resolved it to send the request */
   url: string;
   /** The values of sensitive headers are redacted before they leave the page */
   requestHeaders: Header[];
