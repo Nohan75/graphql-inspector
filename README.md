@@ -224,12 +224,14 @@ DevTools panel             src/entrypoints/panel/                   React UI
 
 The messages these four contexts exchange, and the rule that makes a request body a GraphQL one, are defined once, in `src/utils/captureProtocol.ts`. Each context imports it, and so does the panel preview.
 
+In the panel, three sources report the same request: the background when it leaves, the in-page interceptor when it leaves and when its response arrives, and the DevTools network events when it has finished. `src/utils/requestLog.ts` pairs their reports, so that a request is listed once, and holds the timing rules that go with it. `useRequests` only connects it to those sources and to the clock.
+
 | Folder | Role |
 | --- | --- |
 | `src/entrypoints/` | Extension entry points: service worker, content scripts, DevTools page, panel |
 | `src/components/` | React components of the panel |
-| `src/hooks/` | `useRequests` (collection and request/response correlation), `useSettings` |
-| `src/utils/` | The capture protocol, GraphQL parsing, syntax highlighting, diff, sandbox URL building |
+| `src/hooks/` | `useRequests` (connects the request log to the background, to DevTools and to the clock), `useSettings` |
+| `src/utils/` | The capture protocol, the request log, GraphQL parsing, syntax highlighting, diff, sandbox URL building |
 
 ### Requested permissions
 
