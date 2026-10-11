@@ -135,4 +135,24 @@ export const fixtures: Fixture[] = [
       }),
     },
   },
+  {
+    // A slow request with a heavy response: what the list is scanned for
+    url: ENDPOINT,
+    operationName: 'AllCharacters',
+    query: 'query AllCharacters { characters { id name status } }',
+    variables: null,
+    response: {
+      status: 200,
+      duration: 2410,
+      body: JSON.stringify({
+        data: {
+          characters: Array.from({ length: 800 }, (_, index) => ({
+            id: String(index + 1),
+            name: `Character ${index + 1}`,
+            status: 'Alive',
+          })),
+        },
+      }),
+    },
+  },
 ];

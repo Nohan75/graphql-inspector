@@ -148,7 +148,8 @@ The **Run Batch** button adds nothing to the panel: batched requests are not cap
 ### Request list
 
 - Type badge: `Q` (query), `M` (mutation), `S` (subscription).
-- Operation name (`Anonymous` if it has none) and endpoint URL.
+- Operation name (`Anonymous` if it has none). The endpoint URL is in its tooltip.
+- Duration and response size, under the name, once the response has arrived: `1.84 s · 2.3 kB`. The duration runs from the request being sent to its response having arrived, or to its failure. The size is the one of the whole response body, uncompressed: it can be larger than the transferred size the Network panel shows. Both are the ones DevTools measured when it reports the request, and otherwise the ones measured in the page, where the duration includes the time the page took to get to the response. The tooltip gives the exact values. A pending request, and one that got no response, show neither.
 - HTTP status, green for 2xx and red from 400 up. When the response carries GraphQL errors, which a server usually sends with a `200`, the status is red whatever it is and a red badge counts them; their messages are in the tooltip. `●●●` means the response is pending, `—` that no response was captured after 30 seconds. A response that comes later still completes the request.
 - **Filter requests…** filters on operation name or URL.
 - The row of filters above the list narrows it further. **Q**, **M** and **S** keep the queries, the mutations or the subscriptions. **Errors** keeps what went wrong: an HTTP status from 400 up, GraphQL errors, a request that failed or got no response. **Pending** keeps the requests still waiting for their response. Each one is a switch, and they combine with the text filter. A selected request stays in the detail panel when a filter hides its row.
@@ -212,7 +213,7 @@ The `⚙` button opens the sandbox settings, which are stored in `chrome.storage
 ## Known limits
 
 - Not captured: `GET` requests, batched requests (a JSON body that is an array), persisted queries sent without a `query` field, and subscriptions over WebSocket.
-- Response bodies are truncated at 2 MB, and queries over 500 KB are ignored.
+- Response bodies are truncated at 2 MB, and queries over 500 KB are ignored. The response size in the list is still the one of the whole body.
 - Beyond 300 lines, the compare-mode diff no longer aligns lines: it shows all of A, then all of B.
 
 ## Project structure
@@ -231,14 +232,14 @@ DevTools panel             src/entrypoints/panel/                   React UI
 
 The messages these four contexts exchange, and the rule that makes a request body a GraphQL one, are defined once, in `src/utils/captureProtocol.ts`. Each context imports it, and so does the panel preview.
 
-In the panel, three sources report the same request: the background when it leaves, the in-page interceptor when it leaves and when its response arrives, and the DevTools network events when it has finished. `src/utils/requestLog.ts` pairs their reports, so that a request is listed once, and holds the timing rules that go with it. `useRequests` only connects it to those sources and to the clock.
+In the panel, three sources report the same request: the background when it leaves, the in-page interceptor when it leaves and when its response arrives, and the DevTools network events when it has finished. `src/utils/requestLog.ts` pairs their reports, so that a request is listed once, and holds the timing rules that go with it. Two of the sources measure how long a request took and how big its response is: the interceptor, in its response report, and DevTools. The log keeps what DevTools measured when it reports the request, and what the page measured otherwise. `useRequests` only connects it to those sources and to the clock.
 
 | Folder | Role |
 | --- | --- |
 | `src/entrypoints/` | Extension entry points: service worker, content scripts, DevTools page, panel |
 | `src/components/` | React components of the panel |
 | `src/hooks/` | `useRequests` (connects the request log to the background, to DevTools and to the clock), `useSettings` |
-| `src/utils/` | The capture protocol, the request log, the settings store, GraphQL parsing, syntax highlighting, diff, sandbox URL building |
+| `src/utils/` | The capture protocol, the request log, the settings store, GraphQL parsing, syntax highlighting, diff, sandbox URL building, how durations and sizes are written |
 
 ### Requested permissions
 
