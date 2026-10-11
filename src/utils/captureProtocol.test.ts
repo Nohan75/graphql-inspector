@@ -5,6 +5,7 @@ import {
   parseGraphQLBody,
   readPageReport,
   readPageCaptureSwitch,
+  redactHeader,
   type InterceptorReport,
 } from './captureProtocol';
 
@@ -174,6 +175,40 @@ describe('a report of the interceptor on the page bus', () => {
     ['a string', 'gql_request'],
   ])('is not %s', (_what, data) => {
     expect(readPageReport(data)).toBeNull();
+  });
+});
+
+describe('a header whose value is a credential', () => {
+  it.each([
+    'authorization',
+    'proxy-authorization',
+    'authentication',
+    'cookie',
+    'set-cookie',
+    'x-api-key',
+    'api-key',
+    'x-auth-token',
+    'x-csrf-token',
+    'x-xsrf-token',
+  ])('keeps its name and loses its value: %s', (name) => {
+    expect(redactHeader({ name, value: 'secret' })).toEqual({
+      name,
+      value: '[redacted by GraphQL Inspector]',
+    });
+  });
+
+  it('is recognised whatever the case of its name', () => {
+    expect(redactHeader({ name: 'Authorization', value: 'Bearer secret' })).toEqual({
+      name: 'Authorization',
+      value: '[redacted by GraphQL Inspector]',
+    });
+  });
+
+  it('is not any other header, which is left as it is', () => {
+    expect(redactHeader({ name: 'content-type', value: 'application/json' })).toEqual({
+      name: 'content-type',
+      value: 'application/json',
+    });
   });
 });
 
