@@ -20,6 +20,10 @@ _Avoid_: entry, call
 A captured request whose response has not arrived yet. It stops being pending when the response arrives, or when the wait for it is given up.
 _Avoid_: in-flight request, open request
 
+**Request log**:
+The captured requests of the inspected tab, in the order they were first reported, as the panel lists them. It only keeps the most recent ones.
+_Avoid_: history, store
+
 **Query document**:
 The GraphQL text carried by a captured request: one or more operations, plus the fragments they use. It may hold a mutation or a subscription as well as a query.
 _Avoid_: query (ambiguous with the operation type), query string, query text
