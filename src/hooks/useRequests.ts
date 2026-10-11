@@ -81,6 +81,7 @@ export function useRequests(preserveLog: boolean) {
           requestHeaders: headers(request.request.headers),
           responseHeaders: headers(request.response.headers),
           status: request.response.status,
+          startedAt: Date.parse(request.startedDateTime),
         },
         Date.now()
       );

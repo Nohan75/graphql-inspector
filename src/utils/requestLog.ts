@@ -21,6 +21,8 @@ const ATTACH_WINDOW = 2_000;
 const RESOLVED_WINDOW = 5_000;
 /** How long DevTools has to give a response body: it does not always answer */
 const BODY_WINDOW = 5_000;
+/** How far the time a request is first reported can be from the time DevTools says it started */
+const START_WINDOW = 2_000;
 
 /** A request DevTools reports as finished, reduced to what the log reads of it */
 export interface FinishedRequest {
@@ -32,6 +34,8 @@ export interface FinishedRequest {
   requestHeaders: Header[];
   responseHeaders: Header[];
   status: number;
+  /** When the request started, in milliseconds since the epoch. NaN when DevTools does not say. */
+  startedAt: number;
 }
 
 /**
@@ -98,6 +102,8 @@ export function createRequestLog(): RequestLog {
   const completed = new Map<string, { id: number; at: number }>();
   /** Captured requests whose body was asked of DevTools → when it was asked */
   const awaitingBody = new Map<number, number>();
+  /** Captured requests DevTools has reported: it reports a request once */
+  const reportedByNetwork = new Set<number>();
   /**
    * Id of an interceptor's report → the captured request it joined, for the
    * requests that stopped being pending before the interceptor reported
@@ -261,22 +267,54 @@ export function createRequestLog(): RequestLog {
       timedOut: false,
     }));
     awaitingBody.set(entry.id, now);
+    reportedByNetwork.add(entry.id);
     return entry.id;
   }
 
   /**
-   * DevTools reports a request that is already completed: its headers are
-   * news, and its body too when the request has none.
+   * DevTools reports a request that is no longer pending: its headers are
+   * news, its status too when the request was given up on, and its body
+   * when the request has none.
    */
   function bringFromNetwork(id: number, finished: FinishedRequest, now: number): number | null {
+    const request = requests.find((candidate) => candidate.id === id);
+    if (!request) return null;
+    reportedByNetwork.add(id);
+
+    if (request.timedOut) {
+      completed.set(completedKey(request.url, request.operationName), { id, at: now });
+    }
     change(id, () => ({
       requestHeaders: finished.requestHeaders,
       responseHeaders: finished.responseHeaders,
+      ...(request.timedOut ? { status: finished.status, timedOut: false } : null),
     }));
-    const request = requests.find((candidate) => candidate.id === id);
-    if (!request || request.responseRaw) return null;
+
+    if (request.responseRaw) return null;
     awaitingBody.set(id, now);
     return id;
+  }
+
+  /**
+   * The request DevTools reports, when the log already lists it and it is
+   * no longer pending: the one of the same URL and operation that was first
+   * reported closest to the time DevTools says the request started. DevTools
+   * can report long after the other sources, and after a request was given
+   * up on, so the time its report arrives at tells nothing.
+   */
+  function startedAsReported(finished: FinishedRequest, operationName: string): GQLRequest | undefined {
+    let closest: GQLRequest | undefined;
+    let gap = START_WINDOW;
+    for (const request of requests) {
+      if (request.pending || reportedByNetwork.has(request.id)) continue;
+      if (request.url !== finished.url || request.operationName !== operationName) continue;
+      const distance = Math.abs(request.timestamp - finished.startedAt);
+      if (distance < gap) {
+        closest = request;
+        gap = distance;
+      }
+    }
+    return closest;
   }
 
   return {
@@ -317,7 +355,12 @@ export function createRequestLog(): RequestLog {
       const entry = waiting.find((candidate) => candidate.operationName === operationName);
       if (entry) return completeFromNetwork(entry, finished, now);
 
-      // Already completed by the interceptor? Then it is not listed again.
+      // Already listed and no longer pending? Then it is not listed again.
+      const earlier = startedAsReported(finished, operationName);
+      if (earlier) return bringFromNetwork(earlier.id, finished, now);
+
+      // The same, for when DevTools does not say when the request started:
+      // a request of that operation completed a moment ago is taken for it.
       const recent = completed.get(completedKey(finished.url, operationName));
       if (recent && now - recent.at < RESOLVED_WINDOW) {
         return bringFromNetwork(recent.id, finished, now);
@@ -339,6 +382,7 @@ export function createRequestLog(): RequestLog {
         pending: false,
       });
       awaitingBody.set(id, now);
+      reportedByNetwork.add(id);
       return id;
     },
 
@@ -377,10 +421,13 @@ export function createRequestLog(): RequestLog {
       for (const [id, askedAt] of awaitingBody) {
         if (now - askedAt >= BODY_WINDOW) awaitingBody.delete(id);
       }
-      // No use waiting on behalf of a request the log no longer lists
+      // No use remembering a request the log no longer lists
       const listed = new Set(requests.map((request) => request.id));
       for (const [reportId, id] of awaitingReport) {
         if (!listed.has(id)) awaitingReport.delete(reportId);
+      }
+      for (const id of reportedByNetwork) {
+        if (!listed.has(id)) reportedByNetwork.delete(id);
       }
 
       if (givenUp.length > 0) {
@@ -396,6 +443,7 @@ export function createRequestLog(): RequestLog {
       completed.clear();
       awaitingBody.clear();
       awaitingReport.clear();
+      reportedByNetwork.clear();
     },
   };
 }

@@ -47,6 +47,7 @@ const finished = (name: string, extra: Partial<FinishedRequest> = {}): FinishedR
   requestHeaders: [{ name: 'x-seen-by', value: 'network' }],
   responseHeaders: [{ name: 'x-answered-to', value: 'network' }],
   status: 200,
+  startedAt: 0,
   ...extra,
 });
 
@@ -399,12 +400,81 @@ describe('a finished request DevTools reports', () => {
     });
   });
 
-  it('is listed as another request when the interceptor completed its request 5 seconds before or more', () => {
+  it('still brings its headers long afterwards to the request that was reported as it started', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 1000);
+    log.receive(response('page-1'), 1100);
+    log.tick(10 * SECOND);
+
+    const id = log.networkFinished(finished('Viewer', { startedAt: 990 }), 60 * SECOND);
+
+    expect(states(log)).toEqual(['Viewer: 200']);
+    expect(log.requests[0].requestHeaders).toEqual([{ name: 'x-seen-by', value: 'network' }]);
+    expect(id).toBeNull();
+  });
+
+  it('is the request reported less than 2 seconds from when it started, and another request beyond', () => {
+    const near = createRequestLog();
+    near.receive(request('page-1', 'Viewer'), 0);
+    near.receive(response('page-1'), 100);
+    near.networkFinished(finished('Viewer', { startedAt: 1999 }), 60 * SECOND);
+
+    const far = createRequestLog();
+    far.receive(request('page-1', 'Viewer'), 0);
+    far.receive(response('page-1'), 100);
+    far.networkFinished(finished('Viewer', { startedAt: 2000 }), 60 * SECOND);
+
+    expect(states(near)).toEqual(['Viewer: 200']);
+    expect(states(far)).toEqual(['Viewer: 200', 'Viewer: 200']);
+  });
+
+  it('goes, among completed requests of the same operation, to the one reported closest to when it started', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Poll'), 0);
+    log.receive(response('page-1'), 100);
+    log.receive(request('page-2', 'Poll'), 1000);
+    log.receive(response('page-2'), 1100);
+    log.tick(10 * SECOND);
+
+    log.networkFinished(finished('Poll', { startedAt: 980 }), 60 * SECOND);
+
+    expect(log.requests.map((r) => r.requestHeaders[0].value)).toEqual(['page', 'network']);
+  });
+
+  it('is not taken twice for the same request: a second one of the same operation is listed', () => {
+    const log = createRequestLog();
+
+    log.networkFinished(finished('Poll', { startedAt: 0 }), 100);
+    log.tick(10 * SECOND);
+    log.networkFinished(finished('Poll', { startedAt: 500 }), 10 * SECOND + 600);
+
+    expect(states(log)).toEqual(['Poll: 200', 'Poll: 200']);
+  });
+
+  it('completes the request that was given up on, when it started as that one was reported', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+    log.tick(35 * SECOND);
+    expect(states(log)).toEqual(['Viewer: given up']);
+
+    const id = log.networkFinished(finished('Viewer', { startedAt: 0, status: 201 }), 40 * SECOND);
+
+    expect(states(log)).toEqual(['Viewer: 201']);
+    expect(log.requests[0]).toMatchObject({
+      timedOut: false,
+      requestHeaders: [{ name: 'x-seen-by', value: 'network' }],
+      responseHeaders: [{ name: 'x-answered-to', value: 'network' }],
+    });
+    expect(id).toBe(1); // and its body is asked for
+  });
+
+  it('is listed as another request, as before, when DevTools does not say when it started', () => {
     const log = createRequestLog();
     log.receive(request('page-1', 'Viewer'), 0);
     log.receive(response('page-1'), 100);
+    log.tick(10 * SECOND);
 
-    log.networkFinished(finished('Viewer'), 100 + 5000);
+    log.networkFinished(finished('Viewer', { startedAt: NaN }), 60 * SECOND);
 
     expect(states(log)).toEqual(['Viewer: 200', 'Viewer: 200']);
   });
