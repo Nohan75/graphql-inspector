@@ -1,3 +1,4 @@
+import { PANEL_PORT, type FromPanel, type ToPanel } from '../src/utils/captureProtocol';
 import { fixtures } from './fixtures';
 
 /**
@@ -12,18 +13,18 @@ import { fixtures } from './fixtures';
 /** Fired on `window` with the URL the panel asked to open in a new tab */
 export const TAB_OPENED = 'preview:tab-opened';
 
-type Listener = (message: unknown) => void;
+type Listener = (message: ToPanel) => void;
 
 function connect() {
   const listeners: Listener[] = [];
   let open = true;
-  const emit = (message: unknown) => {
+  const emit = (message: ToPanel) => {
     if (open) listeners.forEach((listener) => listener(message));
   };
 
   return {
-    name: 'devtools-panel',
-    postMessage(message: { type?: string }) {
+    name: PANEL_PORT,
+    postMessage(message: FromPanel) {
       if (message.type !== 'init') return;
       // Asynchronously, like a real port. A port closed in the meantime stays
       // silent, which is what React StrictMode's first mount relies on.

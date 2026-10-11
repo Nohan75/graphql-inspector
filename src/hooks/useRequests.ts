@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GQLRequest } from '../types';
+import { parseOperationType, parseOperationName } from '../utils/graphql';
 import {
+  PANEL_PORT,
   parseGraphQLBody,
-  parseOperationType,
-  parseOperationName,
-} from '../utils/graphql';
+  type RequestReport,
+  type ResponseReport,
+  type FromPanel,
+  type PendingRequest,
+  type ToPanel,
+} from '../utils/captureProtocol';
 
 const MAX_REQUESTS = 500;
 const MAX_QUERY_LENGTH = 500_000;   // 500 KB
@@ -92,13 +97,7 @@ export function useRequests(preserveLog: boolean) {
 
   // ── webRequest pending, forwarded by the background ─────────────────
   const handlePendingMessage = useCallback(
-    (payload: {
-      url: string;
-      query: string;
-      variables: Record<string, unknown> | null;
-      operationName: string | null;
-      timestamp: number;
-    }) => {
+    (payload: PendingRequest) => {
       if (!payload.query || payload.query.length > MAX_QUERY_LENGTH) return;
 
       const id = ++requestIdCounter;
@@ -137,15 +136,7 @@ export function useRequests(preserveLog: boolean) {
   // webRequest usually reports the same request first. When it did, attach
   // the interceptor's id to that row rather than adding a second one.
   const handleInterceptorRequest = useCallback(
-    (payload: {
-      id: string;
-      url: string;
-      query: string;
-      variables: Record<string, unknown> | null;
-      operationName: string | null;
-      requestHeaders: Array<{ name: string; value: string }>;
-      timestamp: number;
-    }) => {
+    (payload: RequestReport) => {
       if (!payload.query || payload.query.length > MAX_QUERY_LENGTH) return;
 
       const operationName =
@@ -202,13 +193,7 @@ export function useRequests(preserveLog: boolean) {
 
   // ── In-page interceptor: response ───────────────────────────────────
   const handleInterceptorResponse = useCallback(
-    (payload: {
-      id: string;
-      url: string;
-      status: number;
-      responseHeaders: Array<{ name: string; value: string }>;
-      body: string;
-    }) => {
+    (payload: ResponseReport) => {
       // Exact correlation: find the pending meta carrying this interceptor id
       let match: PendingMeta | undefined;
       let matchUrl = '';
@@ -300,12 +285,10 @@ export function useRequests(preserveLog: boolean) {
     function connectPort() {
       if (closed) return;
       try {
-        port = chrome.runtime.connect({ name: 'devtools-panel' });
-        port.postMessage({ type: 'init', tabId });
+        port = chrome.runtime.connect({ name: PANEL_PORT });
+        port.postMessage({ type: 'init', tabId } satisfies FromPanel);
 
-        // The messages crossing the contexts are not typed yet: that is #8.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        port.onMessage.addListener((msg: { type: string; payload: any }) => {
+        port.onMessage.addListener((msg: ToPanel) => {
           if (msg.type === 'gql_pending') handlePendingMessage(msg.payload);
           else if (msg.type === 'gql_request') handleInterceptorRequest(msg.payload);
           else if (msg.type === 'gql_response') handleInterceptorResponse(msg.payload);
