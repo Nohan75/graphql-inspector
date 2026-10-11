@@ -36,6 +36,10 @@ export interface FinishedRequest {
   status: number;
   /** When the request started, in milliseconds since the epoch. NaN when DevTools does not say. */
   startedAt: number;
+  /** How long the request took, in milliseconds. NaN when DevTools does not say. */
+  duration: number;
+  /** Size in bytes of the response body, uncompressed. NaN when DevTools does not say. */
+  responseSize: number;
 }
 
 /**
@@ -46,6 +50,12 @@ export interface FinishedRequest {
  * DevTools when it has finished. The log pairs their reports, so that a
  * request is listed once, and holds the timing rules that pairing needs. It
  * reads no clock: every report comes with the time it is received at.
+ *
+ * Two sources measure how long a request took and how big its response is:
+ * the interceptor, from inside the page, and DevTools, on the network. The
+ * ones DevTools measured are kept when it reports the request, the page's
+ * otherwise. The times the reports are received at are not a measure: they
+ * include the time a report takes to reach the panel.
  */
 export interface RequestLog {
   /** The captured requests, oldest first. A new list whenever one of them changes. */
@@ -79,6 +89,20 @@ interface Pending {
 }
 
 const completedKey = (url: string, operationName: string) => `${url}|${operationName}`;
+
+/**
+ * The duration and the response size a source measured, without the one it
+ * did not measure: a source says so with null or with something that is not
+ * a number, zero or more.
+ */
+function measured(duration: number | null, responseSize: number | null) {
+  const isMeasure = (value: number | null): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  return {
+    ...(isMeasure(duration) ? { duration } : null),
+    ...(isMeasure(responseSize) ? { responseSize } : null),
+  };
+}
 
 function parseJson(raw: string): unknown {
   try {
@@ -225,6 +249,7 @@ export function createRequestLog(): RequestLog {
         status: report.status,
         pending: false,
         timedOut: false,
+        ...measured(report.duration, report.size),
       }));
       return;
     }
@@ -247,11 +272,19 @@ export function createRequestLog(): RequestLog {
         responseRaw,
         status: report.status,
         timedOut: false,
+        ...measured(report.duration, report.size),
       }));
-    } else if (!request.responseRaw && responseRaw) {
-      // Completed by DevTools, which does not always give a body: the one
-      // read in the page is news when the request has none.
-      change(id, () => ({ response: parseJson(responseRaw), responseRaw }));
+    } else {
+      // Completed by DevTools, which does not always give a body, and may
+      // not have measured the request: what the page has is news for what
+      // the request lacks, and for that only.
+      const { duration, responseSize } = measured(report.duration, report.size);
+      const news: Partial<GQLRequest> = {
+        ...(!request.responseRaw && responseRaw ? { response: parseJson(responseRaw), responseRaw } : null),
+        ...(request.duration === undefined && duration !== undefined ? { duration } : null),
+        ...(request.responseSize === undefined && responseSize !== undefined ? { responseSize } : null),
+      };
+      if (Object.keys(news).length > 0) change(id, () => news);
     }
   }
 
@@ -265,6 +298,7 @@ export function createRequestLog(): RequestLog {
       status: finished.status,
       pending: false,
       timedOut: false,
+      ...measured(finished.duration, finished.responseSize),
     }));
     awaitingBody.set(entry.id, now);
     reportedByNetwork.add(entry.id);
@@ -273,8 +307,9 @@ export function createRequestLog(): RequestLog {
 
   /**
    * DevTools reports a request that is no longer pending: its headers are
-   * news, its status too when the request was given up on, and its body
-   * when the request has none.
+   * news, and so is what it measured, which replaces what the page did. Its
+   * status is news too when the request was given up on, and its body when
+   * the request has none.
    */
   function bringFromNetwork(id: number, finished: FinishedRequest, now: number): number | null {
     const request = requests.find((candidate) => candidate.id === id);
@@ -288,6 +323,7 @@ export function createRequestLog(): RequestLog {
       requestHeaders: finished.requestHeaders,
       responseHeaders: finished.responseHeaders,
       ...(request.timedOut ? { status: finished.status, timedOut: false } : null),
+      ...measured(finished.duration, finished.responseSize),
     }));
 
     if (request.responseRaw) return null;
@@ -380,6 +416,7 @@ export function createRequestLog(): RequestLog {
         url: finished.url,
         timestamp: now,
         pending: false,
+        ...measured(finished.duration, finished.responseSize),
       });
       awaitingBody.set(id, now);
       reportedByNetwork.add(id);

@@ -50,6 +50,8 @@ const finished = (name: string, extra: Partial<FinishedRequest> = {}): FinishedR
   responseHeaders: [{ name: 'x-answered-to', value: 'network' }],
   status: 200,
   startedAt: 0,
+  duration: 30,
+  responseSize: 20,
   ...extra,
 });
 
@@ -515,6 +517,161 @@ describe('a finished request DevTools reports', () => {
 
     expect(states(log)).toEqual(['Viewer: pending']);
     expect(id).toBeNull();
+  });
+});
+
+describe('the duration and the response size of a request', () => {
+  /** What the log has for each captured request: [duration, response size] */
+  const measures = (log: RequestLog) => log.requests.map((r) => [r.duration, r.responseSize]);
+
+  it('are the ones the page measured, when the interceptor reports the response', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+    log.receive(request('page-1', 'Viewer'), 10);
+
+    // the 150 ms the reports took to arrive tell nothing
+    log.receive(response('page-1', { duration: 120, size: 2_500 }), 150);
+
+    expect(measures(log)).toEqual([[120, 2_500]]);
+  });
+
+  it('are not there while the request is pending, nor once it is given up on', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    expect(measures(log)).toEqual([[undefined, undefined]]);
+
+    log.tick(35 * SECOND);
+    expect(states(log)).toEqual(['Viewer: given up']);
+    expect(measures(log)).toEqual([[undefined, undefined]]);
+  });
+
+  it('are the ones of the response that comes after the request was given up on', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.tick(35 * SECOND);
+
+    log.receive(response('page-1', { duration: 61_000, size: 900 }), 62 * SECOND);
+
+    expect(measures(log)).toEqual([[61_000, 900]]);
+  });
+
+  it('are the ones DevTools measured, when it completes the request', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+
+    log.networkFinished(finished('Viewer', { duration: 87.4, responseSize: 1_200 }), 100);
+
+    expect(measures(log)).toEqual([[87.4, 1_200]]);
+  });
+
+  it('are the ones DevTools measured, for a request no other source reported', () => {
+    const log = createRequestLog();
+
+    log.networkFinished(finished('Viewer', { duration: 87.4, responseSize: 1_200 }), 100);
+
+    expect(measures(log)).toEqual([[87.4, 1_200]]);
+  });
+
+  it('become the ones DevTools measured, when it reports a request the interceptor completed', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.receive(response('page-1', { duration: 120, size: 2_500 }), 130);
+
+    log.networkFinished(finished('Viewer', { duration: 87.4, responseSize: 2_501 }), 140);
+
+    expect(measures(log)).toEqual([[87.4, 2_501]]);
+  });
+
+  it('stay the ones DevTools measured, when the interceptor reports the response afterwards', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.networkFinished(finished('Viewer', { duration: 87.4, responseSize: 2_501 }), 100);
+
+    log.receive(response('page-1', { duration: 120, size: 2_500 }), 130);
+
+    expect(measures(log)).toEqual([[87.4, 2_501]]);
+  });
+
+  it('become the ones DevTools measured, when it completes a request that was given up on', () => {
+    const log = createRequestLog();
+    log.receive(pending('Viewer'), 0);
+    log.tick(35 * SECOND);
+
+    log.networkFinished(finished('Viewer', { duration: 44_000, responseSize: 310 }), 45 * SECOND);
+
+    expect(states(log)).toEqual(['Viewer: 200']);
+    expect(measures(log)).toEqual([[44_000, 310]]);
+  });
+
+  it('stay the ones the page measured for what DevTools does not say', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.receive(response('page-1', { duration: 120, size: 2_500 }), 130);
+
+    log.networkFinished(finished('Viewer', { duration: NaN, responseSize: 2_501 }), 140);
+
+    expect(measures(log)).toEqual([[120, 2_501]]);
+  });
+
+  it('take from the page what DevTools did not say when it completed the request', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.networkFinished(finished('Viewer', { duration: 87.4, responseSize: NaN }), 100);
+    expect(measures(log)).toEqual([[87.4, undefined]]);
+
+    log.receive(response('page-1', { duration: 120, size: 2_500 }), 130);
+
+    expect(measures(log)).toEqual([[87.4, 2_500]]);
+  });
+
+  it('have no response size when the page could not read the body', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+
+    log.receive(response('page-1', { body: '', duration: 120, size: null }), 130);
+
+    expect(measures(log)).toEqual([[120, undefined]]);
+  });
+
+  it('are 0 for a request that failed at once, which is not the same as not measured', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+
+    log.receive(response('page-1', { status: 0, body: '', duration: 0, size: 0 }), 5);
+
+    expect(measures(log)).toEqual([[0, 0]]);
+  });
+
+  it.each([
+    ['a negative number', -1],
+    ['not a number', NaN],
+    ['infinite', Infinity],
+    // what a number that is not one becomes on its way from the page
+    ['null', null],
+  ])('leave out a measure that is %s', (_what, value) => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    log.receive(request('page-2', 'Friends'), 0);
+
+    log.receive(response('page-1', { duration: value, size: 2_500 }), 130);
+    log.receive(response('page-2', { duration: 120, size: value }), 130);
+
+    expect(measures(log)).toEqual([
+      [undefined, 2_500],
+      [120, undefined],
+    ]);
+  });
+
+  it('leave the list as it is when the interceptor brings nothing new to a request DevTools completed', () => {
+    const log = createRequestLog();
+    log.receive(request('page-1', 'Viewer'), 0);
+    const id = log.networkFinished(finished('Viewer'), 100);
+    log.networkBody(id!, '{"data":"from the network"}', 110);
+    const before = log.requests;
+
+    log.receive(response('page-1'), 130);
+
+    expect(log.requests).toBe(before);
   });
 });
 
