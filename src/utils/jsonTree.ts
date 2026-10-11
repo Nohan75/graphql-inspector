@@ -39,6 +39,28 @@ export function collapseAll(nodes: JsonNode[]): Set<number> {
 }
 
 /**
+ * The collapsed lines once the ones that hide a given line are expanded:
+ * what it takes for that line to be displayed. The same set when it already is.
+ */
+export function expandTo(
+  nodes: JsonNode[],
+  collapsed: ReadonlySet<number>,
+  key: number
+): ReadonlySet<number> {
+  // The lines we are inside of, down to the one to show
+  const inside: number[] = [];
+  for (const node of nodes) {
+    if (node.key === key) break;
+    if (node.type === 'open' && node.isCollapsible) inside.push(node.key);
+    else if (node.type === 'close') inside.pop();
+  }
+
+  const hiding = inside.filter((holder) => collapsed.has(holder));
+  if (hiding.length === 0) return collapsed;
+  return new Set([...collapsed].filter((holder) => !hiding.includes(holder)));
+}
+
+/**
  * Keys of the lines that collapsed lines hide: everything they hold, and
  * their closing line, which the collapsed line stands for.
  */

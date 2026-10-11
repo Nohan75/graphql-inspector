@@ -164,7 +164,7 @@ Clicking a request opens four tabs:
 
 The query, the variables, the response and the raw body each have a **Copy** button.
 
-Search in the **Response** tab highlights matches and shows how many there are. `Enter` goes to the next match, `Shift + Enter` to the previous one, and `Esc` clears the search.
+Search in the **Response** tab highlights matches and shows how many there are. `Enter` goes to the next match, `Shift + Enter` to the previous one, and `Esc` clears the search. A match that sits in a collapsed part of the tree is expanded to when it becomes the current one.
 
 ### Open in a sandbox
 

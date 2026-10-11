@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collapseAll, flattenJson, hiddenNodes, type JsonNode } from './jsonTree';
+import { collapseAll, expandTo, flattenJson, hiddenNodes, type JsonNode } from './jsonTree';
 
 /** A line the way the tree displays it, indented by its depth */
 const shown = (node: JsonNode) =>
@@ -166,5 +166,70 @@ describe('collapsing everything', () => {
   it('collapses nothing in a value that holds nothing', () => {
     expect(collapseAll(flattenJson('just text')).size).toBe(0);
     expect(collapseAll(flattenJson({})).size).toBe(0);
+  });
+});
+
+describe('expanding up to a line', () => {
+  /** The lines displayed once everything is collapsed, then expanded up to the line found by `find` */
+  function visibleAfterExpandingTo(find: (node: JsonNode) => boolean) {
+    const nodes = flattenJson(document);
+    const target = nodes.find(find);
+    if (!target) throw new Error('no such line');
+    const hidden = hiddenNodes(nodes, expandTo(nodes, collapseAll(nodes), target.key));
+    return nodes.filter((node) => !hidden.has(node.key)).map(shown);
+  }
+
+  it('expands the collapsed lines that hold it, and leaves the others collapsed', () => {
+    // the name of the origin, not the one of the character
+    expect(visibleAfterExpandingTo((node) => node.searchText === 'name: "Earth"')).toEqual([
+      '{1}',
+      '  data: {4}',
+      '    name: "Rick"',
+      '    tags: [2]',
+      '    origin: {1}',
+      '      name: "Earth"',
+      '    }',
+      '    episodes: []',
+      '  }',
+      '}',
+    ]);
+  });
+
+  it('leaves a collapsed line collapsed when it is the one to show', () => {
+    expect(visibleAfterExpandingTo((node) => node.label === 'origin')).toEqual([
+      '{1}',
+      '  data: {4}',
+      '    name: "Rick"',
+      '    tags: [2]',
+      '    origin: {1}',
+      '    episodes: []',
+      '  }',
+      '}',
+    ]);
+  });
+
+  it('expands a line to show its closing line', () => {
+    const closingOfTags = (node: JsonNode) => node.type === 'close' && node.lineNumber === 7;
+
+    expect(visibleAfterExpandingTo(closingOfTags)).toEqual([
+      '{1}',
+      '  data: {4}',
+      '    name: "Rick"',
+      '    tags: [2]',
+      '      0: true',
+      '      1: null',
+      '    ]',
+      '    origin: {1}',
+      '    episodes: []',
+      '  }',
+      '}',
+    ]);
+  });
+
+  it('gives the same collapsed lines back when the line is already displayed', () => {
+    const nodes = flattenJson(document);
+    const collapsed = new Set([keyOf(nodes, 'origin')]);
+
+    expect(expandTo(nodes, collapsed, keyOf(nodes, 'tags'))).toBe(collapsed);
   });
 });

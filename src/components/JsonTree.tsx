@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
-import { collapseAll, flattenJson, hiddenNodes } from '../utils/jsonTree';
+import { collapseAll, expandTo, flattenJson, hiddenNodes } from '../utils/jsonTree';
 
 interface JsonTreeProps {
   data: unknown;
@@ -57,7 +57,7 @@ export function JsonTree({
   onMatchesFound,
   ref,
 }: JsonTreeProps) {
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set());
   const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const nodes = useMemo(() => flattenJson(data), [data]);
@@ -102,14 +102,23 @@ export function JsonTree({
   const currentMatchNodeKey =
     matchTotal > 0 ? matchNodeKeys[currentMatchIndex % matchTotal] : -1;
 
-  // Scroll to current match when it changes
+  // Show the current match when it changes: expand what hides it, then
+  // scroll to it. Only then: a line the user collapses afterwards stays so.
+  const toScrollTo = useRef(-1);
   useEffect(() => {
     if (currentMatchNodeKey === -1) return;
-    const el = rowRefs.current.get(currentMatchNodeKey);
-    if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }, [currentMatchNodeKey]);
+    toScrollTo.current = currentMatchNodeKey;
+    setCollapsed((prev) => expandTo(nodes, prev, currentMatchNodeKey));
+  }, [currentMatchNodeKey, nodes]);
+
+  // After every render: the row of a match that was hidden only exists once
+  // the lines that held it are expanded.
+  useEffect(() => {
+    const el = rowRefs.current.get(toScrollTo.current);
+    if (!el) return;
+    toScrollTo.current = -1;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
 
   return (
     <div className="code-font">
