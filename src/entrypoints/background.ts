@@ -13,6 +13,15 @@
  *   webRequest runs in the service worker and is the only reliable way to
  *   observe request starts from the background.
  */
+import {
+  PANEL_PORT,
+  parseGraphQLBody,
+  type FromPanel,
+  type PanelQueryAnswer,
+  type ToBackground,
+  type ToContentScript,
+  type ToPanel,
+} from '../utils/captureProtocol';
 
 export default defineBackground(() => {
   /**
@@ -33,8 +42,9 @@ export default defineBackground(() => {
    * extension captures nothing on the other sites you browse.
    */
   function setCapture(tabId: number, active: boolean) {
+    const message: ToContentScript = { type: active ? 'gql_activate' : 'gql_deactivate' };
     chrome.tabs
-      .sendMessage(tabId, { type: active ? 'gql_activate' : 'gql_deactivate' })
+      .sendMessage(tabId, message)
       .catch(() => {
         // No content script in that tab (chrome:// page, tab closed, …)
       });
@@ -52,11 +62,11 @@ export default defineBackground(() => {
 
   // ── 1. DevTools panel connects here on load ─────────────────────────
   chrome.runtime.onConnect.addListener((port) => {
-    if (port.name !== 'devtools-panel') return;
+    if (port.name !== PANEL_PORT) return;
 
     let registeredTabId: number | null = null;
 
-    port.onMessage.addListener((msg: { type: string; tabId?: number }) => {
+    port.onMessage.addListener((msg: FromPanel) => {
       if (msg.type === 'init' && msg.tabId != null) {
         registeredTabId = msg.tabId;
         const ports = panelPorts.get(registeredTabId) ?? new Set();
@@ -72,7 +82,7 @@ export default defineBackground(() => {
   });
 
   /** Relay a message to every panel watching a tab */
-  function broadcast(tabId: number, message: unknown) {
+  function broadcast(tabId: number, message: ToPanel) {
     const ports = panelPorts.get(tabId);
     if (!ports || ports.size === 0) return;
     // Iterate a copy: unregister() mutates the Set on a failed send.
@@ -90,13 +100,13 @@ export default defineBackground(() => {
   // ── 2. Relay captures from the in-page interceptor ──────────────────
   // The interceptor wraps fetch/XHR in the page and reports both the request
   // and its response body. This path is independent of chrome.devtools.network.
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((msg: ToBackground | undefined, sender, sendResponse) => {
     const tabId = sender.tab?.id;
     if (tabId == null) return;
 
     // A page that just loaded asks whether a panel is already watching it
     if (msg?.type === 'gql_panel_query') {
-      sendResponse({ active: panelPorts.has(tabId) });
+      sendResponse({ active: panelPorts.has(tabId) } satisfies PanelQueryAnswer);
       return;
     }
 
@@ -124,26 +134,12 @@ export default defineBackground(() => {
         return;
       }
 
-      let gql: { query?: unknown; variables?: unknown; operationName?: unknown };
-      try {
-        gql = JSON.parse(text);
-      } catch {
-        return; // Not JSON
-      }
-
-      if (typeof gql.query !== 'string') return; // Not a GraphQL request
+      const gql = parseGraphQLBody(text);
+      if (!gql) return; // Not a GraphQL request
 
       broadcast(details.tabId, {
         type: 'gql_pending',
-        payload: {
-          url: details.url,
-          query: gql.query,
-          variables: (gql.variables as Record<string, unknown>) ?? null,
-          operationName: typeof gql.operationName === 'string'
-            ? gql.operationName
-            : null,
-          timestamp: details.timeStamp,
-        },
+        payload: { url: details.url, ...gql, timestamp: details.timeStamp },
       });
     },
     { urls: ['<all_urls>'] },

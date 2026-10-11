@@ -5,21 +5,25 @@
  * DevTools page cannot receive chrome.runtime messages from a content script.
  * So this script relays in both directions:
  *
- *   page → extension : captured GraphQL requests and responses
- *   extension → page : whether a DevTools panel is open, which is what gates
- *                      the interceptor. It stays dormant until told otherwise,
- *                      so nothing is captured while you browse other sites.
+ *   page → extension : what the interceptor reports, requests and responses
+ *   extension → page : the capture switch, on while a DevTools panel is open.
+ *                      The interceptor stays dormant until told otherwise, so
+ *                      nothing is captured while you browse other sites.
  *
- * Everything arriving from the page is untrusted: only known message types are
- * forwarded, and only the fields we expect are copied.
+ * Everything arriving from the page is untrusted: only the interceptor's
+ * reports are forwarded, and only with the fields a report has. The capture
+ * protocol does the reading.
  */
-const FORWARDED = new Set(['gql_request', 'gql_response']);
+import {
+  pageCaptureSwitch,
+  readPageReport,
+  type PanelQueryAnswer,
+  type ToBackground,
+  type ToContentScript,
+} from '../utils/captureProtocol';
 
 function setInterceptorActive(active: boolean) {
-  window.postMessage(
-    { __gqlInspectorControl: true, type: active ? 'activate' : 'deactivate' },
-    '*'
-  );
+  window.postMessage(pageCaptureSwitch(active), '*');
 }
 
 export default defineContentScript({
@@ -30,20 +34,18 @@ export default defineContentScript({
     window.addEventListener('message', (event: MessageEvent) => {
       if (event.source !== window) return;
 
-      const data = event.data;
-      if (!data || data.__gqlInspector !== true) return;
-      if (typeof data.type !== 'string' || !FORWARDED.has(data.type)) return;
-      if (!data.payload || typeof data.payload !== 'object') return;
+      const report = readPageReport(event.data);
+      if (!report) return;
 
       try {
-        chrome.runtime.sendMessage({ type: data.type, payload: data.payload });
+        chrome.runtime.sendMessage(report satisfies ToBackground);
       } catch {
         // Extension reloaded or context invalidated — nothing to do
       }
     });
 
     // ── extension → page ────────────────────────────────────────────
-    chrome.runtime.onMessage.addListener((msg: { type?: string }) => {
+    chrome.runtime.onMessage.addListener((msg: ToContentScript | undefined) => {
       if (msg?.type === 'gql_activate') setInterceptorActive(true);
       else if (msg?.type === 'gql_deactivate') setInterceptorActive(false);
     });
@@ -51,8 +53,8 @@ export default defineContentScript({
     // The panel may already be open when this page loads — ask.
     try {
       chrome.runtime
-        .sendMessage({ type: 'gql_panel_query' })
-        .then((res: { active?: boolean } | undefined) => {
+        .sendMessage({ type: 'gql_panel_query' } satisfies ToBackground)
+        .then((res: PanelQueryAnswer | undefined) => {
           if (res?.active) setInterceptorActive(true);
         })
         .catch(() => {

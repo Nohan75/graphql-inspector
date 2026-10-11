@@ -22,8 +22,17 @@
  *
  * A hostile page can forge the activation message, but a page that hostile
  * can already wrap fetch itself — and the data never leaves that same page
- * context. The gate exists to keep quiet on the other sites you browse.
+ * context. The capture switch exists to keep quiet on the other sites you
+ * browse.
  */
+import {
+  pageReport,
+  parseGraphQLBody,
+  readPageCaptureSwitch,
+  type InterceptorReport,
+  type Header,
+} from '../utils/captureProtocol';
+
 export default defineContentScript({
   matches: ['<all_urls>'],
   world: 'MAIN' as any,   // Chrome 111+ / MV3
@@ -55,10 +64,8 @@ export default defineContentScript({
 
     window.addEventListener('message', (event: MessageEvent) => {
       if (event.source !== window) return;
-      const data = event.data;
-      if (!data || data.__gqlInspectorControl !== true) return;
-      if (data.type === 'activate') active = true;
-      else if (data.type === 'deactivate') active = false;
+      const on = readPageCaptureSwitch(event.data);
+      if (on !== null) active = on;
     });
 
     /** Unique per page load, so ids never collide across frames */
@@ -66,10 +73,10 @@ export default defineContentScript({
     let seq = 0;
     const nextId = () => `${idPrefix}-${++seq}`;
 
-    function post(type: string, payload: Record<string, unknown>) {
+    function post(report: InterceptorReport) {
       if (!active) return;
       try {
-        window.postMessage({ __gqlInspector: true, type, payload }, '*');
+        window.postMessage(pageReport(report), '*');
       } catch {
         // Payload not structured-cloneable — drop it rather than break the page
       }
@@ -79,8 +86,8 @@ export default defineContentScript({
       return DENIED_HEADERS.has(name.toLowerCase()) ? REDACTED : value;
     }
 
-    function headerList(headers: Headers | null): Array<{ name: string; value: string }> {
-      const out: Array<{ name: string; value: string }> = [];
+    function headerList(headers: Headers | null): Header[] {
+      const out: Header[] = [];
       if (!headers) return out;
       try {
         headers.forEach((value, name) =>
@@ -90,27 +97,6 @@ export default defineContentScript({
         // ignore
       }
       return out;
-    }
-
-    /** Parse a body and return the GraphQL fields, or null if it is not GraphQL */
-    function asGraphQL(text: string | null) {
-      if (!text) return null;
-      let parsed: any;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        return null;
-      }
-      if (!parsed || typeof parsed.query !== 'string') return null;
-      return {
-        query: parsed.query as string,
-        variables:
-          parsed.variables && typeof parsed.variables === 'object'
-            ? (parsed.variables as Record<string, unknown>)
-            : null,
-        operationName:
-          typeof parsed.operationName === 'string' ? parsed.operationName : null,
-      };
     }
 
     // ── fetch ──────────────────────────────────────────────────────────
@@ -133,7 +119,9 @@ export default defineContentScript({
           ? input
           : input instanceof URL
           ? input.href
-          : (input as Request).url;
+          : typeof (input as Request).url === 'string'
+          ? (input as Request).url
+          : String(input); // what fetch itself does with anything else
 
       // Read the request body BEFORE handing it to fetch — a Request's body
       // is single-use, so it has to be cloned while it is still intact.
@@ -150,7 +138,7 @@ export default defineContentScript({
         bodyText = Promise.resolve(null);
       }
 
-      let requestHeaders: Array<{ name: string; value: string }> = [];
+      let requestHeaders: Header[] = [];
       try {
         requestHeaders = headerList(
           new Headers(
@@ -165,19 +153,17 @@ export default defineContentScript({
       const promise = _fetch(input, init);
 
       bodyText.then((text) => {
-        const gql = asGraphQL(text);
+        const gql = parseGraphQLBody(text);
         if (!gql) return;
 
         const id = nextId();
-        post('gql_request', {
-          id,
-          url,
-          query: gql.query,
-          variables: gql.variables,
-          operationName: gql.operationName,
-          requestHeaders,
-          timestamp: Date.now(),
+        post({
+          type: 'gql_request',
+          payload: { id, url, ...gql, requestHeaders, timestamp: Date.now() },
         });
+
+        const respond = (status: number, responseHeaders: Header[], body: string) =>
+          post({ type: 'gql_response', payload: { id, url, status, responseHeaders, body } });
 
         promise.then(
           (res) => {
@@ -191,23 +177,15 @@ export default defineContentScript({
               copy = null;
             }
             if (!copy) {
-              post('gql_response', { id, url, status, responseHeaders, body: '' });
+              respond(status, responseHeaders, '');
               return;
             }
             copy.text().then(
-              (body) =>
-                post('gql_response', {
-                  id,
-                  url,
-                  status,
-                  responseHeaders,
-                  body: body.slice(0, MAX_BODY),
-                }),
-              () =>
-                post('gql_response', { id, url, status, responseHeaders, body: '' })
+              (body) => respond(status, responseHeaders, body.slice(0, MAX_BODY)),
+              () => respond(status, responseHeaders, '')
             );
           },
-          () => post('gql_response', { id, url, status: 0, responseHeaders: [], body: '' })
+          () => respond(0, [], '')
         );
       });
 
@@ -237,17 +215,12 @@ export default defineContentScript({
       const url = (this as any).__gqlUrl;
 
       if (active && method === 'POST' && typeof body === 'string') {
-        const gql = asGraphQL(body);
+        const gql = parseGraphQLBody(body);
         if (gql) {
           const id = nextId();
-          post('gql_request', {
-            id,
-            url,
-            query: gql.query,
-            variables: gql.variables,
-            operationName: gql.operationName,
-            requestHeaders: [],
-            timestamp: Date.now(),
+          post({
+            type: 'gql_request',
+            payload: { id, url, ...gql, requestHeaders: [], timestamp: Date.now() },
           });
 
           this.addEventListener('loadend', () => {
@@ -260,7 +233,7 @@ export default defineContentScript({
             } catch {
               responseText = '';
             }
-            const responseHeaders: Array<{ name: string; value: string }> = [];
+            const responseHeaders: Header[] = [];
             try {
               for (const line of (this.getAllResponseHeaders() || '').trim().split(/[\r\n]+/)) {
                 const sep = line.indexOf(':');
@@ -275,12 +248,15 @@ export default defineContentScript({
             } catch {
               // ignore
             }
-            post('gql_response', {
-              id,
-              url,
-              status: this.status,
-              responseHeaders,
-              body: responseText.slice(0, MAX_BODY),
+            post({
+              type: 'gql_response',
+              payload: {
+                id,
+                url,
+                status: this.status,
+                responseHeaders,
+                body: responseText.slice(0, MAX_BODY),
+              },
             });
           });
         }

@@ -137,7 +137,7 @@ The **Run Batch** button adds nothing to the panel: batched requests are not cap
 
 ### Request capture
 
-`POST` requests whose JSON body has a `query` field are captured, whether they go through `fetch` or `XMLHttpRequest`. Each request shows up in the list as soon as it is sent, with a pending indicator, and is completed when its response arrives.
+`POST` requests whose JSON body has a `query` field holding a non-empty string are captured, whether they go through `fetch` or `XMLHttpRequest`. Each request shows up in the list as soon as it is sent, with a pending indicator, and is completed when its response arrives.
 
 ### Request list
 
@@ -198,7 +198,7 @@ The `⚙` button opens the sandbox settings, which are stored in `chrome.storage
 
 ### Privacy
 
-- Interception is off by default. It is only active in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
+- Capture is off by default. It is only on in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
 - Values of sensitive headers (`Authorization`, `Cookie`, `X-API-Key`, CSRF tokens…) are redacted when captured in the page; only the header name is kept. When the DevTools network API provides the real headers, those are shown instead; they do not leave DevTools.
 - Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL. The per-field `↗` button only passes the variables its sub-query uses.
 
@@ -222,12 +222,14 @@ service worker             src/entrypoints/background.ts            webRequest +
 DevTools panel             src/entrypoints/panel/                   React UI
 ```
 
+The messages these four contexts exchange, and the rule that makes a request body a GraphQL one, are defined once, in `src/utils/captureProtocol.ts`. Each context imports it, and so does the panel preview.
+
 | Folder | Role |
 | --- | --- |
 | `src/entrypoints/` | Extension entry points: service worker, content scripts, DevTools page, panel |
 | `src/components/` | React components of the panel |
 | `src/hooks/` | `useRequests` (collection and request/response correlation), `useSettings` |
-| `src/utils/` | GraphQL parsing, syntax highlighting, diff, sandbox URL building |
+| `src/utils/` | The capture protocol, GraphQL parsing, syntax highlighting, diff, sandbox URL building |
 
 ### Requested permissions
 
