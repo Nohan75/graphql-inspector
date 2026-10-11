@@ -1,30 +1,17 @@
-import { useState, useEffect } from 'react';
-import type { Settings } from '../types';
+import { useSyncExternalStore } from 'react';
+import { createSettingsStore, type SettingsStore } from '../utils/settingsStore';
 
-const STORAGE_KEY = 'gql_inspector_settings';
+let store: SettingsStore | undefined;
 
-const defaultSettings: Settings = {
-  sandboxUrl: 'https://studio.apollographql.com/sandbox/explorer',
-  sandboxFormat: 'auto',
-};
+/**
+ * One store for the whole panel, so that every component reads the same
+ * settings. Created on first use: `chrome` is not there yet when the panel
+ * preview loads this file.
+ */
+const panelSettings = () => (store ??= createSettingsStore(chrome.storage.local));
 
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    chrome.storage.local.get([STORAGE_KEY], (result) => {
-      if (result[STORAGE_KEY]) {
-        setSettings({ ...defaultSettings, ...result[STORAGE_KEY] });
-      }
-      setLoaded(true);
-    });
-  }, []);
-
-  const saveSettings = (newSettings: Settings) => {
-    setSettings(newSettings);
-    chrome.storage.local.set({ [STORAGE_KEY]: newSettings });
-  };
-
-  return { settings, saveSettings, loaded };
+  const { get, save, subscribe } = panelSettings();
+  const settings = useSyncExternalStore(subscribe, get);
+  return { settings, saveSettings: save };
 }
