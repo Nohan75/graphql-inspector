@@ -103,7 +103,7 @@ To test a production build after a change, follow the steps in [Updating the ext
 | `npm run lint` | Runs ESLint |
 | `npm run panel` | Serves the panel preview at `http://localhost:5183/` |
 
-Tests sit next to the code they cover, as `*.test.ts` files under `src/`.
+Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The tests of an entry point are one folder down, in `src/entrypoints/__tests__/`: WXT builds every script placed directly in `src/entrypoints/` as an entry point.
 
 ### Panel preview
 

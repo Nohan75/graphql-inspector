@@ -82,6 +82,19 @@ export default defineContentScript({
       }
     }
 
+    /**
+     * The URL the way the browser resolves it to send the request: absolute,
+     * against the base URL of the document. chrome.webRequest reports the
+     * same request under that URL, and the panel pairs the two by it.
+     */
+    function absolute(url: string): string {
+      try {
+        return new URL(url, document.baseURI).href;
+      } catch {
+        return url; // not a URL the browser can send to either
+      }
+    }
+
     function redact(name: string, value: string): string {
       return DENIED_HEADERS.has(name.toLowerCase()) ? REDACTED : value;
     }
@@ -114,14 +127,15 @@ export default defineContentScript({
       // Dormant: no body cloning, no capture, no cost
       if (method !== 'POST' || !active) return _fetch(input, init);
 
-      const url =
+      const url = absolute(
         typeof input === 'string'
           ? input
           : input instanceof URL
           ? input.href
           : typeof (input as Request).url === 'string'
           ? (input as Request).url
-          : String(input); // what fetch itself does with anything else
+          : String(input) // what fetch itself does with anything else
+      );
 
       // Read the request body BEFORE handing it to fetch — a Request's body
       // is single-use, so it has to be cloned while it is still intact.
@@ -206,7 +220,7 @@ export default defineContentScript({
       ...rest: any[]
     ) {
       (this as any).__gqlMethod = String(method ?? '').toUpperCase();
-      (this as any).__gqlUrl = typeof url === 'string' ? url : String(url);
+      (this as any).__gqlUrl = absolute(typeof url === 'string' ? url : String(url));
       return (_open as any).call(this, method, url, ...rest);
     };
 
