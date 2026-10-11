@@ -1,129 +1,19 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
+import { collapseAll, expandTo, flattenJson, hiddenNodes } from '../utils/jsonTree';
 
 interface JsonTreeProps {
   data: unknown;
   searchTerm?: string;
   currentMatchIndex?: number;
   onMatchesFound?: (count: number) => void;
+  /** To collapse or expand the whole tree from outside it */
+  ref?: React.Ref<JsonTreeHandle>;
 }
 
-interface FlatNode {
-  key: number;
-  depth: number;
-  label: string | null;  // object key or array index
-  valuePreview: string;
-  isCollapsible: boolean;
-  type: 'open' | 'close' | 'leaf';
-  closingFor?: number;    // key of the opening node this closes
-  childCount?: number;
-  lineNumber: number;
-  searchText: string;     // text content used for search
-}
-
-function buildFlatNodes(
-  value: unknown,
-  depth: number,
-  label: string | null,
-  nodes: FlatNode[],
-  lineCounter: { n: number }
-): void {
-  const key = nodes.length;
-  const line = lineCounter.n++;
-
-  if (value === null) {
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: 'null',
-      isCollapsible: false,
-      type: 'leaf',
-      lineNumber: line,
-      searchText: label ? `${label}: null` : 'null',
-    });
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    const childCount = value.length;
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: childCount === 0 ? '[]' : `[${childCount}]`,
-      isCollapsible: childCount > 0,
-      type: 'open',
-      childCount,
-      lineNumber: line,
-      searchText: label ? `${label}: [` : '[',
-    });
-    if (childCount > 0) {
-      value.forEach((item, idx) => {
-        buildFlatNodes(item, depth + 1, String(idx), nodes, lineCounter);
-      });
-      const closeLine = lineCounter.n++;
-      nodes.push({
-        key: nodes.length,
-        depth,
-        label: null,
-        valuePreview: ']',
-        isCollapsible: false,
-        type: 'close',
-        closingFor: key,
-        lineNumber: closeLine,
-        searchText: ']',
-      });
-    }
-    return;
-  }
-
-  if (typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>);
-    const childCount = entries.length;
-    nodes.push({
-      key,
-      depth,
-      label,
-      valuePreview: childCount === 0 ? '{}' : `{${childCount}}`,
-      isCollapsible: childCount > 0,
-      type: 'open',
-      childCount,
-      lineNumber: line,
-      searchText: label ? `${label}: {` : '{',
-    });
-    if (childCount > 0) {
-      entries.forEach(([k, v]) => {
-        buildFlatNodes(v, depth + 1, k, nodes, lineCounter);
-      });
-      const closeLine = lineCounter.n++;
-      nodes.push({
-        key: nodes.length,
-        depth,
-        label: null,
-        valuePreview: '}',
-        isCollapsible: false,
-        type: 'close',
-        closingFor: key,
-        lineNumber: closeLine,
-        searchText: '}',
-      });
-    }
-    return;
-  }
-
-  // Primitive
-  const displayValue =
-    typeof value === 'string' ? `"${value}"` : String(value);
-  nodes.push({
-    key,
-    depth,
-    label,
-    valuePreview: displayValue,
-    isCollapsible: false,
-    type: 'leaf',
-    lineNumber: line,
-    searchText: label ? `${label}: ${displayValue}` : displayValue,
-  });
+export interface JsonTreeHandle {
+  /** Collapses everything below the top level */
+  collapseAll(): void;
+  expandAll(): void;
 }
 
 function highlightText(
@@ -165,43 +55,23 @@ export function JsonTree({
   searchTerm = '',
   currentMatchIndex = 0,
   onMatchesFound,
+  ref,
 }: JsonTreeProps) {
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set());
   const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const nodes = useMemo(() => {
-    const list: FlatNode[] = [];
-    buildFlatNodes(data, 0, null, list, { n: 1 });
-    return list;
-  }, [data]);
+  const nodes = useMemo(() => flattenJson(data), [data]);
 
-  // Compute which nodes are hidden (inside a collapsed parent)
-  const hiddenNodes = useMemo(() => {
-    const hidden = new Set<number>();
-    // Track which open nodes are collapsing us
-    const stack: number[] = [];
+  useImperativeHandle(
+    ref,
+    () => ({
+      collapseAll: () => setCollapsed(collapseAll(nodes)),
+      expandAll: () => setCollapsed(new Set()),
+    }),
+    [nodes]
+  );
 
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-
-      if (node.type === 'close' && node.closingFor !== undefined) {
-        const idx = stack.indexOf(node.closingFor);
-        if (idx !== -1) {
-          stack.splice(idx, 1);
-        }
-      }
-
-      if (stack.length > 0) {
-        hidden.add(node.key);
-      }
-
-      if (node.type === 'open' && collapsed.has(node.key)) {
-        stack.push(node.key);
-      }
-    }
-
-    return hidden;
-  }, [nodes, collapsed]);
+  const hidden = useMemo(() => hiddenNodes(nodes, collapsed), [nodes, collapsed]);
 
   // Compute search matches
   const { matchNodeKeys, matchTotal } = useMemo(() => {
@@ -232,19 +102,28 @@ export function JsonTree({
   const currentMatchNodeKey =
     matchTotal > 0 ? matchNodeKeys[currentMatchIndex % matchTotal] : -1;
 
-  // Scroll to current match when it changes
+  // Show the current match when it changes: expand what hides it, then
+  // scroll to it. Only then: a line the user collapses afterwards stays so.
+  const toScrollTo = useRef(-1);
   useEffect(() => {
     if (currentMatchNodeKey === -1) return;
-    const el = rowRefs.current.get(currentMatchNodeKey);
-    if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }, [currentMatchNodeKey]);
+    toScrollTo.current = currentMatchNodeKey;
+    setCollapsed((prev) => expandTo(nodes, prev, currentMatchNodeKey));
+  }, [currentMatchNodeKey, nodes]);
+
+  // After every render: the row of a match that was hidden only exists once
+  // the lines that held it are expanded.
+  useEffect(() => {
+    const el = rowRefs.current.get(toScrollTo.current);
+    if (!el) return;
+    toScrollTo.current = -1;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
 
   return (
     <div className="code-font">
       {nodes.map((node) => {
-        if (hiddenNodes.has(node.key)) return null;
+        if (hidden.has(node.key)) return null;
 
         const isCurrentMatch = node.key === currentMatchNodeKey;
         const hasMatch =

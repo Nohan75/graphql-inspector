@@ -112,7 +112,7 @@ Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The te
 - The sample requests are in `preview/fixtures.ts`.
 - A sandbox would open in a new tab; the preview prints its URL under the panel instead.
 - `?click=` parameters replay clicks in order, to reach a given state from the address bar. For example, `?click=Response` opens the Response tab, and `?click=Add%20to%20compare%232&click=Add%20to%20compare%232` puts the second and third requests in compare mode.
-- `?type=` parameters replace the text of the field that has the focus, in the same sequence as the clicks. For example, `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save` saves another sandbox URL.
+- `?type=` parameters replace the text of the field that has the focus, in the same sequence as the clicks. For example, `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save` saves another sandbox URL. A click on a field, matched by its placeholder, gives it the focus: `?click=Filter%20requests%E2%80%A6&type=Character` filters the list.
 
 The preview does not capture anything. To exercise the capture itself, load the extension in a browser.
 
@@ -159,12 +159,12 @@ Clicking a request opens four tabs:
 | --- | --- |
 | **Headers** | Request and response headers |
 | **Request** | The query, reformatted, with syntax highlighting, line numbers and foldable blocks. Variables shown as a collapsible JSON tree. |
-| **Response** | The response as a collapsible JSON tree, with search |
+| **Response** | The response as a collapsible JSON tree, with search. **Collapse all** collapses everything below the top level, **Expand all** expands it all again. |
 | **Raw** | The response body as received |
 
 The query, the variables, the response and the raw body each have a **Copy** button.
 
-Search in the **Response** tab highlights matches and shows how many there are. `Enter` goes to the next match, `Shift + Enter` to the previous one, and `Esc` clears the search.
+Search in the **Response** tab highlights matches and shows how many there are. `Enter` goes to the next match, `Shift + Enter` to the previous one, and `Esc` clears the search. A match that sits in a collapsed part of the tree is expanded to when it becomes the current one.
 
 ### Open in a sandbox
 

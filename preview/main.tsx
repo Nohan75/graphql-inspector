@@ -49,6 +49,7 @@ createRoot(container).render(
  *   ?click=Response            clicks the element whose text is "Response"
  *   ?click=Add to compare      matches `title` and `aria-label` too
  *   ?click=Character#2         the second match, counting from 1
+ *   ?click=Filter requests…    a field is matched by its placeholder, and takes the focus
  *   ?type=https://example.test replaces the text of the field that has the focus
  *
  * Steps run in the order given, one after the other.
@@ -76,8 +77,12 @@ function click(step: string) {
       .map((node) => node.textContent)
       .join('')
       .trim();
-  const matches = [...document.querySelectorAll<HTMLElement>('button, [title], [aria-label], div, span')].filter(
-    (el) => el.title === label || el.getAttribute('aria-label') === label || ownText(el) === label
+  const matches = [...document.querySelectorAll<HTMLElement>('button, input, [title], [aria-label], div, span')].filter(
+    (el) =>
+      el.title === label ||
+      el.getAttribute('aria-label') === label ||
+      el.getAttribute('placeholder') === label ||
+      ownText(el) === label
   );
   const target = matches[Number(nth) - 1];
   if (!target) {
@@ -85,6 +90,8 @@ function click(step: string) {
     return;
   }
   target.click();
+  // A real click also gives a field the focus, which typing then needs
+  if (target instanceof HTMLInputElement) target.focus();
 }
 
 function type(text: string) {

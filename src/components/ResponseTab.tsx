@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import type { GQLRequest } from '../types';
-import { JsonTree } from './JsonTree';
+import { JsonTree, type JsonTreeHandle } from './JsonTree';
 
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   const ta = document.createElement('textarea');
@@ -31,6 +31,38 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+const FOLD_BUTTON =
+  'inline-flex items-center justify-center bg-transparent border border-border text-text-muted rounded-[3px] px-[5px] py-[3px] cursor-pointer shrink-0 hover:text-text hover:border-accent';
+
+/** Two chevrons that meet, to collapse; two that part, to expand */
+function FoldIcon({ collapse = false }: { collapse?: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {collapse ? (
+        <>
+          <path d="M4.5 2.5 8 6l3.5-3.5" />
+          <path d="M4.5 13.5 8 10l3.5 3.5" />
+        </>
+      ) : (
+        <>
+          <path d="M4.5 6 8 2.5 11.5 6" />
+          <path d="M4.5 10 8 13.5l3.5-3.5" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 interface ResponseTabProps {
   request: GQLRequest;
 }
@@ -40,6 +72,7 @@ export function ResponseTab({ request }: ResponseTabProps) {
   const [matchCount, setMatchCount] = useState(0);
   const [currentMatch, setCurrentMatch] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const treeRef = useRef<JsonTreeHandle>(null);
 
   const handleMatchesFound = useCallback((count: number) => {
     setMatchCount(count);
@@ -80,7 +113,8 @@ export function ResponseTab({ request }: ResponseTabProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Search bar + Copy */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-toolbar shrink-0">
+      {/* Wraps on a narrow panel: the buttons go under the search field */}
+      <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border-b border-border bg-toolbar shrink-0">
         <input
           ref={inputRef}
           type="text"
@@ -91,7 +125,7 @@ export function ResponseTab({ request }: ResponseTabProps) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search response… (Enter / Shift+Enter)"
-          className="flex-1 bg-bg text-text border border-border rounded-[3px] px-2 py-[3px] text-xs outline-none"
+          className="flex-1 min-w-[100px] bg-bg text-text border border-border rounded-[3px] px-2 py-[3px] text-xs outline-none"
         />
         {searchTerm && (
           <>
@@ -109,12 +143,35 @@ export function ResponseTab({ request }: ResponseTabProps) {
             </button>
           </>
         )}
-        <CopyButton text={JSON.stringify(request.response, null, 2)} />
+        {/* One group: the buttons stay together when the toolbar wraps */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => treeRef.current?.collapseAll()}
+            title="Collapse all"
+            aria-label="Collapse all"
+            className={FOLD_BUTTON}
+          >
+            <FoldIcon collapse />
+          </button>
+          <button
+            onClick={() => treeRef.current?.expandAll()}
+            title="Expand all"
+            aria-label="Expand all"
+            className={FOLD_BUTTON}
+          >
+            <FoldIcon />
+          </button>
+          <CopyButton text={JSON.stringify(request.response, null, 2)} />
+        </div>
       </div>
 
       {/* JSON tree */}
       <div className="flex-1 overflow-y-auto py-2">
+        {/* Keyed by the request: what is collapsed belongs to one response,
+            and lines are remembered by their position in it */}
         <JsonTree
+          key={request.id}
+          ref={treeRef}
           data={request.response}
           searchTerm={searchTerm}
           currentMatchIndex={currentMatch}
