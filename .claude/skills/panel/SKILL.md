@@ -40,6 +40,7 @@ The panel only runs inside DevTools, where nothing scripted can reach it. The **
 
 - The per-field `↗` buttons only appear on hover. Count them in the DOM dump: `aria-label="Open this field in sandbox"`.
 - A sandbox opens in a new tab. The preview prints the URL in a strip under the panel instead, `<pre id="opened-tab">`, decoded.
+- A transition in progress. A screenshot can catch a tab or a colour halfway through its transition and show the state it is leaving. Read which tab is active, and any other state, from the DOM dump.
 
 ## Where to change it
 

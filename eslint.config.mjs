@@ -40,6 +40,21 @@ export default defineConfig(
     },
   },
   {
+    // WXT builds every script placed directly in src/entrypoints as an entry
+    // point: a test left there would be shipped with the extension.
+    files: ['src/entrypoints/*.test.*', 'src/entrypoints/*.spec.*'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Program',
+          message:
+            'A test of an entry point goes in src/entrypoints/__tests__/: WXT builds every script placed directly in src/entrypoints/ as an entry point.',
+        },
+      ],
+    },
+  },
+  {
     // The interceptor patches fetch and XMLHttpRequest on the page's own
     // globals, which have no type for the fields it adds to them.
     files: ['src/entrypoints/interceptor.content.ts'],
