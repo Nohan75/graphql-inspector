@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { GQLRequest, Settings } from '../types';
 import { openInSandbox } from '../utils/sandbox';
+import { graphqlErrors } from '../utils/graphql';
 
 interface RequestItemProps {
   request: GQLRequest;
@@ -24,6 +25,19 @@ function statusClass(status: number): string {
   return 'text-text-muted';
 }
 
+/** How many messages the tooltip of a row spells out */
+const MAX_MESSAGES = 5;
+
+/** What the tooltip says of the GraphQL errors of a response */
+function errorsTitle(errors: string[]): string {
+  const more = errors.length - MAX_MESSAGES;
+  return [
+    `${errors.length} GraphQL error${errors.length > 1 ? 's' : ''}`,
+    ...errors.slice(0, MAX_MESSAGES).map((message) => `• ${message}`),
+    ...(more > 0 ? [`… and ${more} more`] : []),
+  ].join('\n');
+}
+
 export function RequestItem({
   request,
   isSelected,
@@ -33,6 +47,9 @@ export function RequestItem({
   onCompareToggle,
 }: RequestItemProps) {
   const [sandboxError, setSandboxError] = useState(false);
+  // A server usually answers 200 when an operation fails: the status alone
+  // would show a failed request as a success.
+  const errors = graphqlErrors(request.response);
   const badge = request.operationType === 'mutation' ? 'M'
     : request.operationType === 'subscription' ? 'S' : 'Q';
   const badgeBg = BADGE_BG[request.operationType] ?? 'bg-badge-query';
@@ -80,6 +97,19 @@ export function RequestItem({
         >
           —
         </span>
+      ) : errors.length > 0 ? (
+        <>
+          <span
+            title={errorsTitle(errors)}
+            aria-label={`${errors.length} GraphQL error${errors.length > 1 ? 's' : ''}`}
+            className="inline-flex items-center justify-center min-w-[14px] h-[14px] px-[3px] rounded-full bg-error text-white text-[9px] font-bold leading-none shrink-0"
+          >
+            {errors.length}
+          </span>
+          <span title={errorsTitle(errors)} className="text-[11px] font-medium shrink-0 text-error">
+            {request.status}
+          </span>
+        </>
       ) : (
         <span className={`text-[11px] font-medium shrink-0 ${statusClass(request.status)}`}>
           {request.status}
