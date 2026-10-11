@@ -55,6 +55,8 @@ function connect() {
                 status: fixture.response.status,
                 responseHeaders: [{ name: 'content-type', value: 'application/json' }],
                 body: fixture.response.body,
+                duration: fixture.response.duration,
+                size: new TextEncoder().encode(fixture.response.body).length,
               },
             });
           }

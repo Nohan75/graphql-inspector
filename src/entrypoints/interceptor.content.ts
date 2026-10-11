@@ -99,6 +99,10 @@ export default defineContentScript({
       return DENIED_HEADERS.has(name.toLowerCase()) ? REDACTED : value;
     }
 
+    /** How many bytes a text takes over the network, where a JSON body travels as UTF-8 */
+    const utf8 = new TextEncoder();
+    const byteLength = (text: string) => utf8.encode(text).length;
+
     function headerList(headers: Headers | null): Header[] {
       const out: Header[] = [];
       if (!headers) return out;
@@ -164,6 +168,7 @@ export default defineContentScript({
         // ignore
       }
 
+      const sentAt = performance.now();
       const promise = _fetch(input, init);
 
       // Copy the response BEFORE the page can read it: once read, a response
@@ -203,8 +208,20 @@ export default defineContentScript({
           payload: { id, url, ...gql, requestHeaders, timestamp: Date.now() },
         });
 
-        const respond = (status: number, responseHeaders: Header[], body: string) =>
-          post({ type: 'gql_response', payload: { id, url, status, responseHeaders, body } });
+        /** `body` is null when it could not be read */
+        const respond = (status: number, responseHeaders: Header[], body: string | null) =>
+          post({
+            type: 'gql_response',
+            payload: {
+              id,
+              url,
+              status,
+              responseHeaders,
+              body: (body ?? '').slice(0, MAX_BODY),
+              duration: Math.round(performance.now() - sentAt),
+              size: body === null ? null : byteLength(body),
+            },
+          });
 
         response.then((r) => {
           if (!r) {
@@ -214,12 +231,12 @@ export default defineContentScript({
           const responseHeaders = headerList(r.res.headers);
           const status = r.res.status;
           if (!r.copy) {
-            respond(status, responseHeaders, '');
+            respond(status, responseHeaders, null);
             return;
           }
           r.copy.text().then(
-            (body) => respond(status, responseHeaders, body.slice(0, MAX_BODY)),
-            () => respond(status, responseHeaders, '')
+            (body) => respond(status, responseHeaders, body),
+            () => respond(status, responseHeaders, null)
           );
         });
       });
@@ -253,20 +270,22 @@ export default defineContentScript({
         const gql = parseGraphQLBody(body);
         if (gql) {
           const id = nextId();
+          const sentAt = performance.now();
           post({
             type: 'gql_request',
             payload: { id, url, ...gql, requestHeaders: [], timestamp: Date.now() },
           });
 
           this.addEventListener('loadend', () => {
-            let responseText: string;
+            /** Null when it could not be read */
+            let responseText: string | null;
             try {
               // responseType '' or 'text' exposes responseText; others do not
               responseText = this.responseType === '' || this.responseType === 'text'
                 ? this.responseText ?? ''
-                : '';
+                : null;
             } catch {
-              responseText = '';
+              responseText = null;
             }
             const responseHeaders: Header[] = [];
             try {
@@ -290,7 +309,9 @@ export default defineContentScript({
                 url,
                 status: this.status,
                 responseHeaders,
-                body: responseText.slice(0, MAX_BODY),
+                body: (responseText ?? '').slice(0, MAX_BODY),
+                duration: Math.round(performance.now() - sentAt),
+                size: responseText === null ? null : byteLength(responseText),
               },
             });
           });

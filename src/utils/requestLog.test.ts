@@ -35,6 +35,8 @@ const response = (id: string, extra: object = {}): ToPanel => ({
     status: 200,
     responseHeaders: [{ name: 'x-answered-to', value: 'page' }],
     body: `{"data":"${id}"}`,
+    duration: 40,
+    size: 17,
     ...extra,
   },
 });

@@ -79,6 +79,16 @@ export interface ResponseReport {
   responseHeaders: Header[];
   /** Empty when the interceptor could not read it */
   body: string;
+  /**
+   * How long the request took as the page saw it, in milliseconds: from the
+   * call that sent it to its response being read, or to its failure
+   */
+  duration: number;
+  /**
+   * Size in bytes of the whole response body, of which `body` may only have
+   * the beginning. Null when the interceptor could not read it.
+   */
+  size: number | null;
 }
 
 /** A report of the in-page interceptor: a request left, or its response arrived */
@@ -120,11 +130,15 @@ export function readPageReport(data: unknown): InterceptorReport | null {
   }
 
   if (data.type === 'gql_response') {
-    const { id, url, status, body } = data.payload;
+    const { id, url, status, body, duration, size } = data.payload;
     const responseHeaders = readHeaders(data.payload.responseHeaders);
     if (typeof id !== 'string' || typeof url !== 'string' || typeof status !== 'number') return null;
     if (!responseHeaders || typeof body !== 'string') return null;
-    return { type: 'gql_response', payload: { id, url, status, responseHeaders, body } };
+    if (typeof duration !== 'number' || (size !== null && typeof size !== 'number')) return null;
+    return {
+      type: 'gql_response',
+      payload: { id, url, status, responseHeaders, body, duration, size },
+    };
   }
 
   return null;

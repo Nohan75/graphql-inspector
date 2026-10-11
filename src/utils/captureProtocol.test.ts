@@ -86,6 +86,8 @@ const response: InterceptorReport = {
     status: 200,
     responseHeaders: [{ name: 'content-type', value: 'application/json' }],
     body: '{"data":{"user":{"name":"Ada"}}}',
+    duration: 120,
+    size: 32,
   },
 };
 
@@ -100,6 +102,8 @@ describe('a report of the interceptor on the page bus', () => {
         status: 200,
         responseHeaders: [{ name: 'content-type', value: 'application/json' }],
         body: '{"data":{"user":{"name":"Ada"}}}',
+        duration: 120,
+        size: 32,
       },
     });
   });
@@ -116,6 +120,15 @@ describe('a report of the interceptor on the page bus', () => {
     };
 
     expect(readPageReport(pageReport(bare))).toEqual(bare);
+  });
+
+  it('is read with a response whose body could not be read, and so has no size', () => {
+    const unread: InterceptorReport = {
+      type: 'gql_response',
+      payload: { ...response.payload, body: '', size: null },
+    };
+
+    expect(readPageReport(pageReport(unread))).toEqual(unread);
   });
 
   it('is read without the fields a report does not have', () => {
@@ -152,6 +165,10 @@ describe('a report of the interceptor on the page bus', () => {
     ['a response whose status is not a number', posted({ ...response.payload, status: '200' }, 'gql_response')],
     ['a response whose body is not a string', posted({ ...response.payload, body: { data: 1 } }, 'gql_response')],
     ['a response without headers', posted({ ...response.payload, responseHeaders: null }, 'gql_response')],
+    ['a response whose duration is not a number', posted({ ...response.payload, duration: '120' }, 'gql_response')],
+    ['a response without a duration', posted({ ...response.payload, duration: undefined }, 'gql_response')],
+    ['a response whose size is not a number', posted({ ...response.payload, size: '32' }, 'gql_response')],
+    ['a response without a size', posted({ ...response.payload, size: undefined }, 'gql_response')],
     ['a request posted as a response', posted(request.payload, 'gql_response')],
     ['null', null],
     ['a string', 'gql_request'],
