@@ -98,7 +98,7 @@ export function QueryTab({ request }: QueryTabProps) {
           </div>
           {showVariables && (
             <div className="py-2">
-              <JsonTree data={request.variables} />
+              <JsonTree key={request.id} data={request.variables} />
             </div>
           )}
         </div>

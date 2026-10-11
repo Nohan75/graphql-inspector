@@ -167,7 +167,10 @@ export function ResponseTab({ request }: ResponseTabProps) {
 
       {/* JSON tree */}
       <div className="flex-1 overflow-y-auto py-2">
+        {/* Keyed by the request: what is collapsed belongs to one response,
+            and lines are remembered by their position in it */}
         <JsonTree
+          key={request.id}
           ref={treeRef}
           data={request.response}
           searchTerm={searchTerm}
