@@ -5,6 +5,10 @@ description: "Run this project's app: the DevTools panel, served in an ordinary 
 
 The panel only runs inside DevTools, where nothing scripted can reach it. The **preview** serves the same `App` component and stylesheet in an ordinary page, fed by fixtures.
 
+## A visible choice comes first
+
+An icon, a label or the place of a control is the maintainer's to choose. Before building one, draw two or three options on a single sheet: a static page at the size of the panel and in its colours, the `--color-*` of `src/styles/globals.css`. Capture it as in step 3, send it and ask which one. Done when the maintainer has picked an option.
+
 ## Steps
 
 1. **Start the preview.** Run `npm run panel` in the background. Done when `http://localhost:5183/` answers 200.

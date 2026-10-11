@@ -2,6 +2,12 @@
 
 Everything committed is in English, whatever the language of the conversation: code, comments, interface labels, documentation, commit messages, pull requests and issues.
 
+## Git
+
+Commit on the feature branch as each step is done. Push and open the pull request when asked.
+
+`main` is protected: the maintainer merges.
+
 ## Skills
 
 The skills in `.claude/skills/` describe this repo: its commands, ports, file paths, interface labels and steps. A change to anything a skill describes updates that skill in the same pull request. Done when a search of `.claude/skills/` for every name the change touched finds nothing the change made false.
