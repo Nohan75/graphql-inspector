@@ -19,6 +19,19 @@ export interface GQLRequest {
   pending?: boolean;
   /** True when the response never arrived and the pending entry was given up on */
   timedOut?: boolean;
+  /**
+   * How long the request took, in milliseconds: from when the page sent it,
+   * the wait before it went on the network included, to when its response
+   * had arrived, or to its failure. Undefined until then, and when no source
+   * measured it.
+   */
+  duration?: number;
+  /**
+   * Size in bytes of the whole response body, uncompressed. `responseRaw` may
+   * only hold the beginning of it. Undefined until the response has arrived,
+   * and when no source measured it.
+   */
+  responseSize?: number;
 }
 
 export type TabId = 'headers' | 'request' | 'response' | 'raw';

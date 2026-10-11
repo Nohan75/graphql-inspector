@@ -21,6 +21,8 @@ const ANSWER = '{"data":{"viewer":{"name":"Ada"}}}';
 /** What Date.now() reads in the page, and what Chrome gives as the time a request left */
 const PAGE_CLOCK = 1_700_000_000_000;
 const CHROME_CLOCK = 1_700_000_000_123;
+/** How long the network takes to answer a request, in milliseconds on the page's timer */
+const NETWORK_TIME = 80;
 
 /** Lets every message in flight arrive: each hop between two contexts takes a task */
 async function settled() {
@@ -82,6 +84,13 @@ async function browser(baseURI = 'https://example.test/app/') {
   /** Everything posted on the page's message bus, by anyone */
   const posted: unknown[] = [];
   const messageListeners: Listener[] = [];
+  /** What performance.now() reads in the page: it only moves while the network answers */
+  let pageTimer = 5_000;
+  const answered = <T>(deliver: () => T) =>
+    later(() => {
+      pageTimer += NETWORK_TIME;
+      return deliver();
+    });
 
   const page = {
     fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -90,7 +99,7 @@ async function browser(baseURI = 'https://example.test/app/') {
       const method = (init?.method ?? request?.method ?? 'GET').toUpperCase();
       const body = typeof init?.body === 'string' ? init.body : request ? await request.clone().text() : null;
       requestLeaves(method, url, body);
-      return later(() => new Response(ANSWER, { status: 200, headers: { 'content-type': 'application/json' } }));
+      return answered(() => new Response(ANSWER, { status: 200, headers: { 'content-type': 'application/json' } }));
     }) as typeof fetch,
 
     XMLHttpRequest: class {
@@ -108,7 +117,7 @@ async function browser(baseURI = 'https://example.test/app/') {
 
       send(body?: string) {
         requestLeaves(this.method.toUpperCase(), this.url, body ?? null);
-        void later(() => {
+        void answered(() => {
           this.status = 200;
           this.responseText = ANSWER;
           this.loadEnd.forEach((listener) => listener());
@@ -136,6 +145,7 @@ async function browser(baseURI = 'https://example.test/app/') {
   vi.stubGlobal('document', { baseURI });
   vi.spyOn(Math, 'random').mockReturnValue(0.5); // the interceptor mints its ids from it: "i-1", "i-2", …
   vi.spyOn(Date, 'now').mockReturnValue(PAGE_CLOCK);
+  vi.spyOn(performance, 'now').mockImplementation(() => pageTimer);
 
   // WXT's helpers are globals at build time; each returns its definition.
   // The entry points are imported here because they call them as they load.
@@ -246,6 +256,8 @@ describe('a GraphQL request the page sends, with a panel open on its tab', () =>
           status: 200,
           responseHeaders: [{ name: 'content-type', value: 'application/json' }],
           body: ANSWER,
+          duration: 80,
+          size: 34, // ANSWER, in bytes
         },
       },
     ]);
@@ -286,6 +298,8 @@ describe('a GraphQL request the page sends, with a panel open on its tab', () =>
         { name: 'set-cookie', value: REDACTED },
       ],
       body: ANSWER,
+      duration: 80,
+      size: 34,
     });
   });
 
@@ -366,6 +380,12 @@ describe('what reaches the panel', () => {
       __gqlInspector: true,
       type: 'gql_request',
       payload: { ...report, extra: 'added by the page' },
+    });
+    // a response as the interceptor reported it before it measured anything
+    chrome.page.postMessage({
+      __gqlInspector: true,
+      type: 'gql_response',
+      payload: { id: 'forged', url: report.url, status: 200, responseHeaders: [], body: '{}' },
     });
     await settled();
 

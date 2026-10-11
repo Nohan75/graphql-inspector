@@ -9,8 +9,8 @@ export interface Fixture {
   operationName: string | null;
   query: string;
   variables: Record<string, unknown> | null;
-  /** Left out for a request that never gets its response */
-  response?: { status: number; body: string };
+  /** Left out for a request that never gets its response. `duration` is in milliseconds. */
+  response?: { status: number; body: string; duration: number };
 }
 
 const ENDPOINT = 'https://example.test/graphql';
@@ -37,6 +37,7 @@ export const fixtures: Fixture[] = [
     variables: { text: 'rick', withOrigin: true, first: 3, unusedHere: 'kept only by the whole query' },
     response: {
       status: 200,
+      duration: 1840,
       body: JSON.stringify({
         data: {
           search: [
@@ -54,6 +55,7 @@ export const fixtures: Fixture[] = [
     variables: { id: '1' },
     response: {
       status: 200,
+      duration: 38,
       body: JSON.stringify({ data: { character: { name: 'Rick Sanchez', status: 'Alive' } } }),
     },
   },
@@ -65,6 +67,7 @@ export const fixtures: Fixture[] = [
     variables: { id: '2' },
     response: {
       status: 200,
+      duration: 41,
       body: JSON.stringify({ data: { character: { name: 'Morty Smith', status: 'Alive' } } }),
     },
   },
@@ -75,6 +78,7 @@ export const fixtures: Fixture[] = [
     variables: { stars: 5 },
     response: {
       status: 400,
+      duration: 212,
       body: JSON.stringify({ errors: [{ message: 'Cannot query field "createReview" on type "Mutation".' }] }),
     },
   },
@@ -84,7 +88,11 @@ export const fixtures: Fixture[] = [
     operationName: 'Broken',
     query: '\n    query Broken {\n      character(id: "1") {\n        name\n',
     variables: null,
-    response: { status: 400, body: JSON.stringify({ errors: [{ message: 'Syntax Error: Expected Name, found <EOF>.' }] }) },
+    response: {
+      status: 400,
+      duration: 17,
+      body: JSON.stringify({ errors: [{ message: 'Syntax Error: Expected Name, found <EOF>.' }] }),
+    },
   },
   {
     // No response: stays pending
@@ -102,6 +110,7 @@ export const fixtures: Fixture[] = [
     variables: { id: '1', name: 'Pickle Rick' },
     response: {
       status: 200,
+      duration: 96,
       body: JSON.stringify({
         data: null,
         errors: [
@@ -119,9 +128,30 @@ export const fixtures: Fixture[] = [
     variables: null,
     response: {
       status: 200,
+      duration: 640,
       body: JSON.stringify({
         data: { episodes: [{ name: 'Pilot' }, null] },
         errors: [{ message: 'Episode 2 could not be loaded.', path: ['episodes', 1] }],
+      }),
+    },
+  },
+  {
+    // A slow request with a heavy response: what the list is scanned for
+    url: ENDPOINT,
+    operationName: 'AllCharacters',
+    query: 'query AllCharacters { characters { id name status } }',
+    variables: null,
+    response: {
+      status: 200,
+      duration: 2410,
+      body: JSON.stringify({
+        data: {
+          characters: Array.from({ length: 800 }, (_, index) => ({
+            id: String(index + 1),
+            name: `Character ${index + 1}`,
+            status: 'Alive',
+          })),
+        },
       }),
     },
   },

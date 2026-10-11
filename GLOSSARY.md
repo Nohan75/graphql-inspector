@@ -20,6 +20,14 @@ _Avoid_: entry, call
 A captured request whose response has not arrived yet. It stops being pending when the response arrives, or when the wait for it is given up.
 _Avoid_: in-flight request, open request
 
+**Duration**:
+How long a captured request took: from when the page sent it to when its response had arrived, or to its failure. The wait before the request went on the network counts, which makes it longer than the time the Network panel gives in its Time column. A pending request has none.
+_Avoid_: latency, response time, elapsed time
+
+**Response size**:
+The size in bytes of the response body of a captured request, uncompressed and whole, even when the panel only holds the beginning of a large body.
+_Avoid_: weight, length, transferred size (what went over the network, compressed and with the headers)
+
 **Request log**:
 The captured requests of the inspected tab, in the order they were first reported, as the panel lists them. It only keeps the most recent ones.
 _Avoid_: history, store

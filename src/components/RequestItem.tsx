@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { GQLRequest, Settings } from '../types';
 import { openInSandbox } from '../utils/sandbox';
 import { graphqlErrors } from '../utils/graphql';
+import { measuresLabel, measuresTitle } from '../utils/measures';
 
 interface RequestItemProps {
   request: GQLRequest;
@@ -76,13 +77,20 @@ export function RequestItem({
         {badge}
       </span>
 
-      {/* Name + URL */}
+      {/* Name, then how long the request took and the size of its response */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+        <div
+          title={request.url}
+          className="font-medium overflow-hidden text-ellipsis whitespace-nowrap"
+        >
           {request.operationName}
         </div>
-        <div className="text-[10px] text-text-muted overflow-hidden text-ellipsis whitespace-nowrap">
-          {request.url}
+        {/* Nothing is measured before the response: the line keeps its height, so the row does not move */}
+        <div
+          title={measuresTitle(request) || undefined}
+          className="text-[10px] text-text-muted overflow-hidden text-ellipsis whitespace-nowrap"
+        >
+          {measuresLabel(request) || '\u00A0'}
         </div>
       </div>
 
