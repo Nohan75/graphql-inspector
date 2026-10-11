@@ -160,6 +160,12 @@ export function replay(entries: TraceEntry[], log: RequestLog = createRequestLog
   return log;
 }
 
+/** The name of the file a trace is exported to, after the time it is exported at */
+export function traceFileName(now: number): string {
+  // 2026-10-12T09:41:07.250Z, down to the second and without the colons
+  return `gql-inspector-trace-${new Date(now).toISOString().slice(0, 19).replaceAll(':', '-')}.json`;
+}
+
 /** A trace as the text of a file. What DevTools did not say, NaN in a finished request, is null there. */
 export function writeTrace(trace: Trace): string {
   return `${JSON.stringify(trace, null, 2)}\n`;

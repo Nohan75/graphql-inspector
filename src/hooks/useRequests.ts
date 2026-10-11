@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GQLRequest } from '../types';
 import { PANEL_PORT, type FromPanel, type Header, type ToPanel } from '../utils/captureProtocol';
 import { createRequestLog } from '../utils/requestLog';
+import { traced } from '../utils/trace';
 
 /** How often the request log is told that time has passed */
 const TICK_INTERVAL = 5_000;
@@ -13,15 +14,26 @@ const headers = (list: Array<{ name: string; value: string }> | undefined): Head
  * Connects the request log to its sources: the port to the background, the
  * DevTools network events and the clock. What the sources report is paired
  * in `src/utils/requestLog.ts`; nothing here decides which request is which.
+ *
+ * With `recordTrace`, what the sources report is also kept as a trace, which
+ * `trace` gives: see `src/utils/trace.ts`.
  */
-export function useRequests(preserveLog: boolean) {
-  const [log] = useState(createRequestLog);
+export function useRequests(preserveLog: boolean, recordTrace: boolean) {
+  const [log] = useState(() => traced(createRequestLog()));
   const [requests, setRequests] = useState<GQLRequest[]>(log.requests);
   const preserveLogRef = useRef(preserveLog);
 
   useEffect(() => {
     preserveLogRef.current = preserveLog;
   }, [preserveLog]);
+
+  // Before the sources are connected, so that nothing they report is missed
+  useEffect(() => {
+    log.record(recordTrace);
+  }, [log, recordTrace]);
+
+  /** What the sources reported since recording was turned on, or null when it is off */
+  const trace = useCallback(() => log.trace(navigator.userAgent), [log]);
 
   const clearRequests = useCallback(() => {
     log.clear();
@@ -122,5 +134,5 @@ export function useRequests(preserveLog: boolean) {
     };
   }, [log]);
 
-  return { requests, clearRequests };
+  return { requests, clearRequests, trace };
 }

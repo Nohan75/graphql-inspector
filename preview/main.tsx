@@ -29,6 +29,44 @@ function OpenedTab() {
   );
 }
 
+/** How much of a saved file the preview shows */
+const SAVED_FILE_SHOWN = 1_500;
+
+/**
+ * Shows the last file the panel asked the browser to save, in place of the
+ * download: its name, its size and how it starts.
+ */
+function SavedFile() {
+  const [file, setFile] = useState<string | null>(null);
+
+  useEffect(() => {
+    // The panel saves a file by clicking a download link it puts in the page
+    const onClick = (event: MouseEvent) => {
+      const link = event.target;
+      if (!(link instanceof HTMLAnchorElement) || !link.download) return;
+      event.preventDefault();
+      void fetch(link.href)
+        .then((saved) => saved.text())
+        .then((text) => {
+          const start = text.length > SAVED_FILE_SHOWN ? `${text.slice(0, SAVED_FILE_SHOWN)}\n…` : text;
+          setFile(`Would save: ${link.download} (${text.length} characters)\n${start}`);
+        });
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+
+  if (!file) return null;
+  return (
+    <pre
+      id="saved-file"
+      className="shrink-0 m-0 px-2 py-1 border-t border-border bg-toolbar text-[11px] text-text-muted whitespace-pre-wrap break-all max-h-40 overflow-y-auto"
+    >
+      {file}
+    </pre>
+  );
+}
+
 const container = document.getElementById('root');
 if (!container) throw new Error('Root element not found');
 
@@ -39,6 +77,7 @@ createRoot(container).render(
         <App />
       </div>
       <OpenedTab />
+      <SavedFile />
     </div>
   </React.StrictMode>
 );
@@ -88,7 +127,7 @@ function click(step: string) {
       .map((node) => node.textContent)
       .join('')
       .trim();
-  const matches = [...document.querySelectorAll<HTMLElement>('button, input, [title], [aria-label], div, span')].filter(
+  const matches = [...document.querySelectorAll<HTMLElement>('button, input, label, [title], [aria-label], div, span')].filter(
     (el) =>
       el.title === label ||
       el.getAttribute('aria-label') === label ||

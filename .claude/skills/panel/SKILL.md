@@ -38,17 +38,19 @@ One line per line on screen, top to bottom. What a picture shows by a colour is 
 - `[x]` and `[ ]` are a checkbox; `[field: "text"]` is a field and what it holds, `[field: (placeholder)]` when it is empty.
 - `> …` is the selected request, or the current search match. `«text»` is a search match.
 - `Would open: …` is the URL of the tab a sandbox button would have opened.
+- `Would save: …` is the file the panel would have saved, a trace for one: its name, its size, then how it starts.
 
 It also has what a picture hides: the per-field `↗` buttons, which only appear on hover, and the state a picture can catch halfway through a transition, such as which tab is open.
 
 ## Clicks
 
-`click=<label>` clicks the first element whose own text, `title`, `aria-label` or placeholder is `<label>`. `#n` picks the nth match, counting from 1. A click on a field gives it the focus.
+`click=<label>` clicks the first element whose own text, `title`, `aria-label` or placeholder is `<label>`. `#n` picks the nth match, counting from 1. A click on a field gives it the focus. A checkbox answers to the text of its label.
 
 - `click=Response`: the Response tab.
 - `click=Broken`: the request named Broken in the list.
 - `click=Mutations click=Errors`: the list narrowed to the mutations that went wrong. The type filters answer to their tooltip, `Queries`, `Mutations`, `Subscriptions`; `Errors` and `Pending` to their text.
 - `"click=Open this field in sandbox#3"`: the per-field button of the third field.
+- `click=Settings "click=Record a trace" click=Save click=Clear click=Trace`: turns the recording of a trace on, then exports it. The fixtures arrive before a click can turn recording on, so the trace only holds what came after: here, the list being cleared.
 - `"click=Add to compare#2" "click=Add to compare#2"`: rows 2 and 3 in compare mode. A row leaves the matches once selected, so the second `#2` is the next row.
 
 ## Typing

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRequestLog, type FinishedRequest } from './requestLog';
-import { readTrace, replay, traced, writeTrace, type TraceEntry } from './trace';
+import { readTrace, replay, traced, traceFileName, writeTrace, type TraceEntry } from './trace';
 import type { ToPanel } from './captureProtocol';
 
 const URL = 'https://api.test/graphql';
@@ -308,6 +308,10 @@ describe('a trace written to a file', () => {
 
     expect(file.version).toBe(1);
     expect(file.entries[0].finished).toMatchObject({ startedAt: null, duration: 30 });
+  });
+
+  it('is named after the time it was exported at, in UTC, without a character a file name cannot have', () => {
+    expect(traceFileName(Date.UTC(2026, 9, 12, 9, 41, 7, 250))).toBe('gql-inspector-trace-2026-10-12T09-41-07.json');
   });
 
   it.each([
