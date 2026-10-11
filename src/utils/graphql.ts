@@ -28,3 +28,22 @@ export function parseOperationName(query: string): string {
   );
   return match?.[1] ?? 'Anonymous';
 }
+
+/**
+ * The messages of the GraphQL errors a response carries: one per entry of
+ * its `errors`, when the response is an object and `errors` a list.
+ *
+ * A GraphQL server usually answers 200 when an operation fails, so the HTTP
+ * status does not tell whether it did.
+ */
+export function graphqlErrors(response: unknown): string[] {
+  if (typeof response !== 'object' || response === null || Array.isArray(response)) return [];
+  const { errors } = response as { errors?: unknown };
+  if (!Array.isArray(errors)) return [];
+
+  return errors.map((error: unknown) => {
+    if (typeof error === 'string') return error;
+    const message = (error as { message?: unknown } | null)?.message;
+    return typeof message === 'string' && message !== '' ? message : 'Error without a message';
+  });
+}

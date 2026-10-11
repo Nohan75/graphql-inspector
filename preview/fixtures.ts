@@ -93,4 +93,36 @@ export const fixtures: Fixture[] = [
     query: 'query Slow { characters { name } }',
     variables: null,
   },
+  {
+    // A 200 that failed: GraphQL errors and no data. The status alone would
+    // show it as a success.
+    url: ENDPOINT,
+    operationName: 'Rename',
+    query: 'mutation Rename($id: ID!, $name: String!) { rename(id: $id, name: $name) { name } }',
+    variables: { id: '1', name: 'Pickle Rick' },
+    response: {
+      status: 200,
+      body: JSON.stringify({
+        data: null,
+        errors: [
+          { message: 'Not authorised to rename this character.', path: ['rename'] },
+          { message: 'Field "name" is too long.', path: ['rename'] },
+        ],
+      }),
+    },
+  },
+  {
+    // A partial success: data, and an error for the part that is missing
+    url: ENDPOINT,
+    operationName: 'Episodes',
+    query: 'query Episodes { episodes { name } }',
+    variables: null,
+    response: {
+      status: 200,
+      body: JSON.stringify({
+        data: { episodes: [{ name: 'Pilot' }, null] },
+        errors: [{ message: 'Episode 2 could not be loaded.', path: ['episodes', 1] }],
+      }),
+    },
+  },
 ];
