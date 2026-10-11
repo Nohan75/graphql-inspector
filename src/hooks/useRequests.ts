@@ -82,8 +82,10 @@ export function useRequests(preserveLog: boolean) {
           responseHeaders: headers(request.response.headers),
           status: request.response.status,
           startedAt: Date.parse(request.startedDateTime),
-          // A finished request is a HAR entry: its total time, and the size
-          // of its response body once decoded
+          // A finished request is a HAR entry. Its total time starts when
+          // the page issued the request: it counts the queueing that the
+          // Time column of the Network panel leaves out. Its content size
+          // is the one of the response body once decoded.
           duration: request.time,
           responseSize: request.response.content.size,
         },

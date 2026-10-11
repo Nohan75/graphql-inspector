@@ -21,7 +21,7 @@ A captured request whose response has not arrived yet. It stops being pending wh
 _Avoid_: in-flight request, open request
 
 **Duration**:
-How long a captured request took: from when it was sent to when its response had arrived, or to its failure. A pending request has none.
+How long a captured request took: from when the page sent it to when its response had arrived, or to its failure. The wait before the request went on the network counts, which makes it longer than the time the Network panel gives in its Time column. A pending request has none.
 _Avoid_: latency, response time, elapsed time
 
 **Response size**:

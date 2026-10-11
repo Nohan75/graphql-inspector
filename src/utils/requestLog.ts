@@ -36,7 +36,11 @@ export interface FinishedRequest {
   status: number;
   /** When the request started, in milliseconds since the epoch. NaN when DevTools does not say. */
   startedAt: number;
-  /** How long the request took, in milliseconds. NaN when DevTools does not say. */
+  /**
+   * How long the request took, in milliseconds, from when the page issued
+   * it: the wait before it went on the network included. NaN when DevTools
+   * does not say.
+   */
   duration: number;
   /** Size in bytes of the response body, uncompressed. NaN when DevTools does not say. */
   responseSize: number;

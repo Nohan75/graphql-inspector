@@ -20,9 +20,10 @@ export interface GQLRequest {
   /** True when the response never arrived and the pending entry was given up on */
   timedOut?: boolean;
   /**
-   * How long the request took, in milliseconds: from when it was sent to when
-   * its response had arrived, or to its failure. Undefined until then, and
-   * when no source measured it.
+   * How long the request took, in milliseconds: from when the page sent it,
+   * the wait before it went on the network included, to when its response
+   * had arrived, or to its failure. Undefined until then, and when no source
+   * measured it.
    */
   duration?: number;
   /**
