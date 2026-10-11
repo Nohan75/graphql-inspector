@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flattenJson, type JsonNode } from './jsonTree';
+import { flattenJson, hiddenNodes, type JsonNode } from './jsonTree';
 
 /** A line the way the tree displays it, indented by its depth */
 const shown = (node: JsonNode) =>
@@ -79,5 +79,45 @@ describe('the lines of a JSON value', () => {
     expect(flattenJson('just text').map(shown)).toEqual(['"just text"']);
     expect(flattenJson(null).map(shown)).toEqual(['null']);
     expect(flattenJson({}).map(shown)).toEqual(['{}']);
+  });
+});
+
+/** The key of the line that carries a label */
+const keyOf = (nodes: JsonNode[], label: string) => {
+  const node = nodes.find((candidate) => candidate.label === label);
+  if (!node) throw new Error(`no line is labelled "${label}"`);
+  return node.key;
+};
+
+/** The lines still displayed once the lines with these labels are collapsed */
+function visibleWith(collapsedLabels: string[]) {
+  const nodes = flattenJson(document);
+  const hidden = hiddenNodes(nodes, new Set(collapsedLabels.map((label) => keyOf(nodes, label))));
+  return nodes.filter((node) => !hidden.has(node.key)).map(shown);
+}
+
+describe('a collapsed line', () => {
+  it('hides the lines it holds and its closing line', () => {
+    expect(visibleWith(['origin'])).toEqual([
+      '{1}',
+      '  data: {4}',
+      '    name: "Rick"',
+      '    tags: [2]',
+      '      0: true',
+      '      1: null',
+      '    ]',
+      '    origin: {1}',
+      '    episodes: []',
+      '  }',
+      '}',
+    ]);
+  });
+
+  it('hides the collapsed lines it holds along with the rest', () => {
+    expect(visibleWith(['data', 'origin'])).toEqual(['{1}', '  data: {4}', '}']);
+  });
+
+  it('leaves every line displayed when there is none', () => {
+    expect(visibleWith([])).toHaveLength(13);
   });
 });

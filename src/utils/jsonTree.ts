@@ -27,28 +27,22 @@ export function flattenJson(value: unknown): JsonNode[] {
   return nodes;
 }
 
-/** Keys of the lines that collapsed nodes hide */
+/**
+ * Keys of the lines that collapsed lines hide: everything they hold, and
+ * their closing line, which the collapsed line stands for.
+ */
 export function hiddenNodes(nodes: JsonNode[], collapsed: ReadonlySet<number>): Set<number> {
   const hidden = new Set<number>();
-  // Track which open nodes are collapsing us
-  const stack: number[] = [];
+  // The collapsed lines we are inside of
+  const inside: number[] = [];
 
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
+  for (const node of nodes) {
+    if (inside.length > 0) hidden.add(node.key);
 
-    if (node.type === 'close' && node.closingFor !== undefined) {
-      const idx = stack.indexOf(node.closingFor);
-      if (idx !== -1) {
-        stack.splice(idx, 1);
-      }
-    }
-
-    if (stack.length > 0) {
-      hidden.add(node.key);
-    }
-
-    if (node.type === 'open' && collapsed.has(node.key)) {
-      stack.push(node.key);
+    if (node.type === 'open' && node.isCollapsible && collapsed.has(node.key)) {
+      inside.push(node.key);
+    } else if (node.type === 'close' && inside[inside.length - 1] === node.closingFor) {
+      inside.pop();
     }
   }
 
