@@ -67,4 +67,4 @@ It also has what a picture hides: the per-field `↗` buttons, which only appear
 
 ## Outside the preview
 
-The capture itself: the in-page interceptor, the content script and the background worker. A change there is checked by a person, with the extension loaded in a browser as the README describes. Say so in the pull request.
+The capture itself: the in-page interceptor, the content script and the background worker. A change there is checked with the `capture` skill, then by a person, with the extension loaded in a browser as the README describes.
