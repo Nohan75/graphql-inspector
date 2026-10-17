@@ -12,6 +12,7 @@ A DevTools extension (Manifest V3) that adds a **GraphQL** tab to the browser's 
 - [Development](#development)
   - [Scripts](#scripts)
   - [Panel preview](#panel-preview)
+  - [Traces](#traces)
   - [Releases](#releases)
   - [Test page](#test-page)
 - [Features](#features)
@@ -114,12 +115,30 @@ Tests sit next to the code they cover, as `*.test.ts` files under `src/`. The te
 `npm run panel` serves the panel in an ordinary page, without a browser extension: the same interface, fed by sample requests and a simulated `chrome` API. Use it to work on the interface or to look at a change.
 
 - The sample requests are in `preview/fixtures.ts`.
-- A sandbox would open in a new tab; the preview prints its URL under the panel instead.
+- A sandbox would open in a new tab; the preview prints its URL under the panel instead. A file the panel would save, such as a trace, is printed there too: its name, its size and how it starts.
 - `?click=` parameters replay clicks in order, to reach a given state from the address bar. For example, `?click=Response` opens the Response tab, and `?click=Add%20to%20compare%232&click=Add%20to%20compare%232` puts the second and third requests in compare mode.
 - `?type=` parameters replace the text of the field that has the focus, in the same sequence as the clicks. For example, `?click=Settings&type=https%3A%2F%2Fsandbox.test%2Fgraphiql&click=Save` saves another sandbox URL. A click on a field, matched by its placeholder, gives it the focus: `?click=Filter%20requests%E2%80%A6&type=Character` filters the list.
 - From the command line, the same steps are written as they read, and the panel comes back as text or as a picture: `npm run panel:dump -- click=Response "click=Collapse all"` and `npm run panel:shot -- shot.png click=Response`. Both need Chrome, start the preview for the run when it is not up, and fail when a step matches nothing. The text gives one line per line on screen and spells out what a picture shows by a colour: the open tab, the selected request, a filter that is on.
 
 The preview does not capture anything. To exercise the capture itself, load the extension in a browser.
+
+### Traces
+
+A trace is what the panel received during a session: every report, the source it came from (the background, the in-page interceptor, DevTools, the clock) and the time it arrived at. It is a debugging aid: a defect seen in the browser, a request listed twice or a response that is missing, can be handed over as a file that reproduces it.
+
+To record one:
+
+1. Open **Settings** (`⚙`), tick **Record a trace** and save. A red **Trace** button appears in the toolbar for as long as the panel records.
+2. Do what shows the defect.
+3. Click **Trace**. The browser saves `gql-inspector-trace-<time>.json`.
+
+Recording starts when the setting is turned on, or when the panel opens with it on, and keeps the 5,000 most recent entries. Turning the setting off forgets them. What a trace holds, and what it leaves out, is under [Privacy](#privacy).
+
+`src/utils/trace.ts` reads a trace back and replays it into a request log, which then lists what the panel listed:
+
+```ts
+const log = replay(readTrace(text).entries);
+```
 
 ### Releases
 
@@ -195,10 +214,11 @@ The `⊕` button on a row adds that request to the comparison. The first one sel
 
 ### Settings
 
-The `⚙` button opens the sandbox settings, which are stored in `chrome.storage.local`:
+The `⚙` button opens the settings, which are stored in `chrome.storage.local`:
 
 - **Sandbox URL**: the address of the sandbox, in `http://` or `https://`. Default: `https://studio.apollographql.com/sandbox/explorer`. It can carry parameters of its own and a fragment: the query is added after the former and before the latter.
 - **URL Format**: how the query is passed in the URL.
+- **Record a trace**: keeps what the panel receives, to replay a defect. Off by default. See [Traces](#traces).
 
 | Format | Generated parameters | Use case |
 | --- | --- | --- |
@@ -211,6 +231,7 @@ The `⚙` button opens the sandbox settings, which are stored in `chrome.storage
 
 - Capture is off by default. It is only on in the tab whose **GraphQL** panel is open and turns off when the panel closes; nothing is captured on other sites.
 - Values of sensitive headers (`Authorization`, `Cookie`, `X-API-Key`, CSRF tokens…) are redacted when captured in the page; only the header name is kept. When the DevTools network API provides the real headers, those are shown instead; they do not leave DevTools.
+- A trace is only recorded while **Record a trace** is on, and only leaves the panel as a file, when you click **Trace**. That file holds the queries, the variables and the responses of the session, with the headers DevTools gives: unlike the panel, it does not keep the values of the ones that carry a credential. It leaves out the requests DevTools reports that cannot be GraphQL ones, such as the form a page logs in with. Keep it on your machine unless it was recorded on public APIs.
 - Captured requests stay in the panel's memory and are not sent anywhere. The one exception happens at your request: **Open in Sandbox** passes the query and variables to the configured sandbox, in the URL. The per-field `↗` button only passes the variables its sub-query uses.
 
 ## Known limits
@@ -235,14 +256,14 @@ DevTools panel             src/entrypoints/panel/                   React UI
 
 The messages these four contexts exchange, and the rule that makes a request body a GraphQL one, are defined once, in `src/utils/captureProtocol.ts`. Each context imports it, and so does the panel preview.
 
-In the panel, three sources report the same request: the background when it leaves, the in-page interceptor when it leaves and when its response arrives, and the DevTools network events when it has finished. `src/utils/requestLog.ts` pairs their reports, so that a request is listed once, and holds the timing rules that go with it. Two of the sources measure how long a request took and how big its response is: the interceptor, in its response report, and DevTools. The log keeps what DevTools measured when it reports the request, and what the page measured otherwise. `useRequests` only connects it to those sources and to the clock.
+In the panel, three sources report the same request: the background when it leaves, the in-page interceptor when it leaves and when its response arrives, and the DevTools network events when it has finished. `src/utils/requestLog.ts` pairs their reports, so that a request is listed once, and holds the timing rules that go with it. Two of the sources measure how long a request took and how big its response is: the interceptor, in its response report, and DevTools. The log keeps what DevTools measured when it reports the request, and what the page measured otherwise. `useRequests` only connects it to those sources and to the clock. `src/utils/trace.ts` wraps the log to record what it is told, when a trace is asked for.
 
 | Folder | Role |
 | --- | --- |
 | `src/entrypoints/` | Extension entry points: service worker, content scripts, DevTools page, panel |
 | `src/components/` | React components of the panel |
 | `src/hooks/` | `useRequests` (connects the request log to the background, to DevTools and to the clock), `useSettings` |
-| `src/utils/` | The capture protocol, the request log, the settings store, GraphQL parsing, syntax highlighting, diff, sandbox URL building, how durations and sizes are written |
+| `src/utils/` | The capture protocol, the request log, the settings store, GraphQL parsing, syntax highlighting, diff, sandbox URL building, how durations and sizes are written, traces |
 
 ### Requested permissions
 
@@ -250,5 +271,5 @@ In the panel, three sources report the same request: the background when it leav
 | --- | --- |
 | `webRequest` | Detect GraphQL requests as soon as they are sent |
 | `tabs` | Turn capture on in the inspected tab and open the sandbox in a new tab |
-| `storage` | Save the sandbox settings |
+| `storage` | Save the settings |
 | `<all_urls>` | Work on any inspected site |

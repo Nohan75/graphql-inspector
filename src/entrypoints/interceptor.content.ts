@@ -16,9 +16,10 @@
  *   1. Dormant by default. Nothing is captured or posted until the DevTools
  *      panel is open for this tab. Without this the extension would broadcast
  *      GraphQL bodies on every site visited, DevTools open or not.
- *   2. Credentials are redacted. Header values on DENIED_HEADERS never leave
- *      this file; the header name is kept so the panel can still show that it
- *      was sent.
+ *   2. Credentials are redacted. The value of a header that carries one
+ *      never leaves this file; the header name is kept so the panel can still
+ *      show that it was sent. Which headers those are is said once, by
+ *      `redactHeader` in the capture protocol.
  *
  * A hostile page can forge the activation message, but a page that hostile
  * can already wrap fetch itself — and the data never leaves that same page
@@ -29,6 +30,7 @@ import {
   pageReport,
   parseGraphQLBody,
   readPageCaptureSwitch,
+  redactHeader,
   type InterceptorReport,
   type Header,
 } from '../utils/captureProtocol';
@@ -43,21 +45,6 @@ export default defineContentScript({
     (window as any).__gqlInspectorActive = true;
 
     const MAX_BODY = 2_000_000; // 2 MB
-
-    /** Header values never forwarded — the name is kept, the value replaced */
-    const DENIED_HEADERS = new Set([
-      'authorization',
-      'proxy-authorization',
-      'authentication',
-      'cookie',
-      'set-cookie',
-      'x-api-key',
-      'api-key',
-      'x-auth-token',
-      'x-csrf-token',
-      'x-xsrf-token',
-    ]);
-    const REDACTED = '[redacted by GraphQL Inspector]';
 
     /** No capture happens until the DevTools panel says it is listening */
     let active = false;
@@ -95,10 +82,6 @@ export default defineContentScript({
       }
     }
 
-    function redact(name: string, value: string): string {
-      return DENIED_HEADERS.has(name.toLowerCase()) ? REDACTED : value;
-    }
-
     /** How many bytes a text takes over the network, where a JSON body travels as UTF-8 */
     const utf8 = new TextEncoder();
     const byteLength = (text: string) => utf8.encode(text).length;
@@ -107,9 +90,7 @@ export default defineContentScript({
       const out: Header[] = [];
       if (!headers) return out;
       try {
-        headers.forEach((value, name) =>
-          out.push({ name, value: redact(name, value) })
-        );
+        headers.forEach((value, name) => out.push(redactHeader({ name, value })));
       } catch {
         // ignore
       }
@@ -292,11 +273,9 @@ export default defineContentScript({
               for (const line of (this.getAllResponseHeaders() || '').trim().split(/[\r\n]+/)) {
                 const sep = line.indexOf(':');
                 if (sep > 0) {
-                  const name = line.slice(0, sep).trim();
-                  responseHeaders.push({
-                    name,
-                    value: redact(name, line.slice(sep + 1).trim()),
-                  });
+                  responseHeaders.push(
+                    redactHeader({ name: line.slice(0, sep).trim(), value: line.slice(sep + 1).trim() })
+                  );
                 }
               }
             } catch {

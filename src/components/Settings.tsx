@@ -11,6 +11,7 @@ interface SettingsProps {
 export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
   const [sandboxUrl, setSandboxUrl] = useState(settings.sandboxUrl);
   const [sandboxFormat, setSandboxFormat] = useState<SandboxFormat>(settings.sandboxFormat ?? 'auto');
+  const [recordTrace, setRecordTrace] = useState(settings.recordTrace);
   const [error, setError] = useState('');
 
   const handleSave = () => {
@@ -20,7 +21,7 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
       return;
     }
     setError('');
-    onSave({ sandboxUrl: trimmed, sandboxFormat });
+    onSave({ sandboxUrl: trimmed, sandboxFormat, recordTrace });
     onClose();
   };
 
@@ -78,6 +79,23 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsProps) {
         </select>
         <div className="mt-1 text-[11px] text-text-muted">
           Use <strong className="text-text">Apollo Playground</strong> if your sandbox is hosted on your own GraphQL endpoint
+        </div>
+
+        {/* A debugging aid, apart from the settings of the sandbox */}
+        <div className="mt-4 pt-3 border-t border-border">
+          <label className="flex items-center gap-1.5 text-xs text-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={recordTrace}
+              onChange={(e) => setRecordTrace(e.target.checked)}
+              className="cursor-pointer"
+            />
+            Record a trace
+          </label>
+          <div className="mt-1 text-[11px] text-text-muted">
+            Keeps what the panel receives, to replay a defect. A trace holds queries, variables and
+            responses: keep the file on this machine unless it was recorded on public APIs.
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

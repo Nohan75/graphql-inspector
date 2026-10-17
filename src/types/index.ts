@@ -39,4 +39,6 @@ export type TabId = 'headers' | 'request' | 'response' | 'raw';
 export interface Settings {
   sandboxUrl: string;
   sandboxFormat: SandboxFormat;
+  /** Whether the panel keeps what it receives as a trace. A debugging aid, off by default. */
+  recordTrace: boolean;
 }

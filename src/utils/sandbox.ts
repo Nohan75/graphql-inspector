@@ -74,7 +74,7 @@ export function validateSandboxUrl(url: string): boolean {
  * Returns false, and opens nothing, when the sandbox URL is not valid.
  */
 export function openInSandbox(
-  { sandboxUrl, sandboxFormat }: Settings,
+  { sandboxUrl, sandboxFormat }: Pick<Settings, 'sandboxUrl' | 'sandboxFormat'>,
   request: Pick<GQLRequest, 'query' | 'variables' | 'url'>,
   subquery?: Subquery
 ): boolean {

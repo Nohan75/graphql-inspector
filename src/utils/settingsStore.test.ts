@@ -20,7 +20,11 @@ function storageHolding(stored?: unknown) {
   };
 }
 
-const graphiql = { sandboxUrl: 'https://sandbox.test/graphiql', sandboxFormat: 'graphiql' } as const;
+const graphiql = {
+  sandboxUrl: 'https://sandbox.test/graphiql',
+  sandboxFormat: 'graphiql',
+  recordTrace: true,
+} as const;
 
 describe('the settings', () => {
   it('are the defaults until the stored ones have been read', () => {
@@ -29,6 +33,7 @@ describe('the settings', () => {
     expect(store.get()).toEqual({
       sandboxUrl: 'https://studio.apollographql.com/sandbox/explorer',
       sandboxFormat: 'auto',
+      recordTrace: false,
     });
   });
 
@@ -38,17 +43,25 @@ describe('the settings', () => {
 
     storage.answerRead();
 
-    expect(store.get()).toEqual({ sandboxUrl: 'https://sandbox.test/graphiql', sandboxFormat: 'graphiql' });
+    expect(store.get()).toEqual({
+      sandboxUrl: 'https://sandbox.test/graphiql',
+      sandboxFormat: 'graphiql',
+      recordTrace: true,
+    });
   });
 
   it('take the default for what the stored ones lack', () => {
-    // as stored by a version that had no URL format yet
+    // as stored by a version that had no URL format yet, and recorded no trace
     const storage = storageHolding({ sandboxUrl: 'https://sandbox.test/graphiql' });
     const store = createSettingsStore(storage);
 
     storage.answerRead();
 
-    expect(store.get()).toEqual({ sandboxUrl: 'https://sandbox.test/graphiql', sandboxFormat: 'auto' });
+    expect(store.get()).toEqual({
+      sandboxUrl: 'https://sandbox.test/graphiql',
+      sandboxFormat: 'auto',
+      recordTrace: false,
+    });
   });
 
   it('stay the defaults when nothing is stored', () => {
@@ -60,6 +73,7 @@ describe('the settings', () => {
     expect(store.get()).toEqual({
       sandboxUrl: 'https://studio.apollographql.com/sandbox/explorer',
       sandboxFormat: 'auto',
+      recordTrace: false,
     });
   });
 });
@@ -86,7 +100,13 @@ describe('saving the settings', () => {
     store.save(graphiql);
 
     expect(storage.written).toEqual([
-      { gql_inspector_settings: { sandboxUrl: 'https://sandbox.test/graphiql', sandboxFormat: 'graphiql' } },
+      {
+        gql_inspector_settings: {
+          sandboxUrl: 'https://sandbox.test/graphiql',
+          sandboxFormat: 'graphiql',
+          recordTrace: true,
+        },
+      },
     ]);
   });
 
@@ -97,7 +117,11 @@ describe('saving the settings', () => {
     store.save(graphiql);
     storage.answerRead();
 
-    expect(store.get()).toEqual({ sandboxUrl: 'https://sandbox.test/graphiql', sandboxFormat: 'graphiql' });
+    expect(store.get()).toEqual({
+      sandboxUrl: 'https://sandbox.test/graphiql',
+      sandboxFormat: 'graphiql',
+      recordTrace: true,
+    });
   });
 });
 

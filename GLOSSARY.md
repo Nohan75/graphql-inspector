@@ -32,6 +32,10 @@ _Avoid_: weight, length, transferred size (what went over the network, compresse
 The captured requests of the inspected tab, in the order they were first reported, as the panel lists them. It only keeps the most recent ones.
 _Avoid_: history, store
 
+**Trace**:
+What the request log was told during a session, in order: every report, the source it came from and the time it arrived at. Replayed into a request log, it gives the list the panel showed.
+_Avoid_: recording (the act, not the result), dump, HAR (the format DevTools exports the network in)
+
 **Query document**:
 The GraphQL text carried by a captured request: one or more operations, plus the fragments they use. It may hold a mutation or a subscription as well as a query.
 _Avoid_: query (ambiguous with the operation type), query string, query text

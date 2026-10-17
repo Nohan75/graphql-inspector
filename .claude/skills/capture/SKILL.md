@@ -19,6 +19,8 @@ The capture only runs in a browser, with the extension loaded. Two tests run it 
 - The DevTools side: the `chrome.devtools.network` events and the panel's port in a real DevTools. `src/utils/requestLog.ts` pairs what arrives there and has its own tests, on reports whose order and times were written by hand. That goes for the duration and the response size DevTools gives too: `src/hooks/useRequests.ts` reads them from `time` and `response.content.size` of a finished request, and no test plays a real one. When comparing by hand, `time` starts when the page issued the request: it is longer than the **Time** column of the Network panel by what its **Timing** tab shows as **Queueing**. `response.content.size` is the response body alone, where the **Size** column counts the headers too.
 - Chrome itself: the stand-ins answer the way `fetch`, `XMLHttpRequest`, `window.postMessage` and `chrome.runtime` are documented to. A service worker going to sleep, a page with a strict content security policy or a request sent from a worker are not played.
 
+A trace brings the DevTools side back within reach, once someone has recorded it in a browser: the README says how, under "Traces". It holds what the background, the interceptor and DevTools reported and when, the clock's ticks, and each time the list was cleared. `replay` in `src/utils/trace.ts` plays it into a request log in a test.
+
 ## Where to change it
 
 Both tests build their stand-ins themselves, at the top of the file.

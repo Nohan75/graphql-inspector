@@ -58,6 +58,32 @@ export interface Header {
   value: string;
 }
 
+/** Headers whose value is a credential, in lower case */
+const CREDENTIAL_HEADERS = [
+  'authorization',
+  'proxy-authorization',
+  'authentication',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+  'api-key',
+  'x-auth-token',
+  'x-csrf-token',
+  'x-xsrf-token',
+];
+
+/** What stands for the value of such a header */
+export const REDACTED = '[redacted by GraphQL Inspector]';
+
+/**
+ * A header as it may leave the place it was read in: the page, or DevTools.
+ * One whose value is a credential keeps its name, so that it still shows as
+ * sent, and loses its value.
+ */
+export function redactHeader({ name, value }: Header): Header {
+  return { name, value: CREDENTIAL_HEADERS.includes(name.toLowerCase()) ? REDACTED : value };
+}
+
 /** What the in-page interceptor reports when a request leaves the page */
 export interface RequestReport extends GraphQLBody {
   /** Minted by the interceptor. The response carries the same one. */

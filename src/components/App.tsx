@@ -9,6 +9,8 @@ import { useRequests } from '../hooks/useRequests';
 import { useSettings } from '../hooks/useSettings';
 import type { GQLRequest } from '../types';
 import { NO_FILTER, type RequestFilter } from '../utils/requestFilter';
+import { saveTextFile } from '../utils/saveFile';
+import { traceFileName, writeTrace } from '../utils/trace';
 
 const MIN_SIDEBAR_WIDTH = 180;
 const MIN_DETAIL_WIDTH = 250;
@@ -24,8 +26,8 @@ export function App() {
   // compareIds[0] = A (red/−), compareIds[1] = B (green/+)
   const [compareIds, setCompareIds] = useState<number[]>([]);
 
-  const { requests, clearRequests } = useRequests(preserveLog);
   const { settings, saveSettings } = useSettings();
+  const { requests, clearRequests, trace } = useRequests(preserveLog, settings.recordTrace);
 
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -51,6 +53,11 @@ export function App() {
     setSelectedId(null);
     setCompareIds([]);
   }, [clearRequests]);
+
+  const handleExportTrace = useCallback(() => {
+    const recorded = trace();
+    if (recorded) saveTextFile(traceFileName(Date.now()), writeTrace(recorded));
+  }, [trace]);
 
   // Toggle a request in/out of the compare pair.
   // Max 2: if already at 2, evict the oldest (index 0) and add the new one.
@@ -110,9 +117,11 @@ export function App() {
       <Toolbar
         filterText={filter.text}
         preserveLog={preserveLog}
+        recordingTrace={settings.recordTrace}
         onFilterChange={(text) => setFilter((current) => ({ ...current, text }))}
         onPreserveLogChange={setPreserveLog}
         onClear={handleClear}
+        onExportTrace={handleExportTrace}
         onOpenSettings={() => setShowSettings(true)}
       />
 

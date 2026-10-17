@@ -6,6 +6,7 @@ const STORAGE_KEY = 'gql_inspector_settings';
 const defaultSettings: Settings = {
   sandboxUrl: 'https://studio.apollographql.com/sandbox/explorer',
   sandboxFormat: 'auto',
+  recordTrace: false,
 };
 
 /** The part of chrome.storage.local the settings are kept in */
