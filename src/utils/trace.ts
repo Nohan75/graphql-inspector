@@ -3,8 +3,10 @@ import { createRequestLog, type FinishedRequest, type RequestLog } from './reque
 
 /**
  * A trace: what the request log was told during a session, in the order it
- * was told. Recorded in a real browser, it says what the three sources send
- * and when; replayed into a request log, it gives the list the panel showed.
+ * was told. Recorded in a real browser, it says what the background, the
+ * interceptor and DevTools send and when, how time passed, and when the list
+ * was cleared; replayed into a request log, it gives the list the panel
+ * showed.
  *
  * A trace is a debugging aid. Nothing is kept until recording is asked for.
  */
